@@ -297,10 +297,20 @@ class Judge:
     def __init__(self, provider=DEFAULT_PROVIDER, model=DEFAULT_JUDGE_MODEL):
         self.provider, self.model = provider, model
         if provider == "anthropic":
-            import anthropic
+            try:
+                import anthropic
+            except ImportError:
+                raise SystemExit(
+                    "the 'anthropic' judge provider needs its SDK:\n"
+                    "    pip install anthropic") from None
             self.client = anthropic.Anthropic()          # reads ANTHROPIC_API_KEY
         elif provider in ("openrouter", "openai"):
-            from openai import OpenAI                     # pip install openai
+            try:
+                from openai import OpenAI
+            except ImportError:
+                raise SystemExit(
+                    f"the '{provider}' judge provider speaks the OpenAI wire format and "
+                    f"needs its SDK:\n    pip install openai") from None
             key = os.environ.get(self.ENV_KEY[provider])
             if not key:
                 raise SystemExit(f"{self.ENV_KEY[provider]} is not set")

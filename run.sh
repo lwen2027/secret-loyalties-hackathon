@@ -60,6 +60,24 @@ preflight() {
 
 judge_args() { echo "--judge-provider $JUDGE_PROVIDER --judge-model $JUDGE_MODEL"; }
 
+# Stages that generate need a CUDA GPU: Qwen3-14B is ~28GB fp16 and will not run on a
+# laptop. Fail here with an explanation rather than after a partial 28GB download.
+require_gpu() {
+    if ! "$PY_BIN" -c "import torch, sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null; then
+        echo >&2
+        echo "ERROR: this stage generates from Qwen3-14B and needs a CUDA GPU." >&2
+        echo "       No usable GPU here (torch missing, or torch.cuda unavailable)." >&2
+        echo >&2
+        echo "  Run it on the RunPod pod:" >&2
+        echo "    git clone https://github.com/lwen2027/secret-loyalties-hackathon.git" >&2
+        echo "    cd secret-loyalties-hackathon && bash scripts/setup_runpod.sh" >&2
+        echo >&2
+        echo "  These stages need NO GPU and do work locally:" >&2
+        echo "    bash run.sh pair | calibrate | report | peek" >&2
+        exit 1
+    fi
+}
+
 # Both policies, always in ONE invocation: the 14B base loads once and the adapter is
 # hot-swapped, and `clean` reuses those same weights with the adapter disabled — so the
 # contrast can't be contaminated by two separate loads.
@@ -68,6 +86,7 @@ policies() { echo "--policy clean --policy teacher=$TEACHER"; }
 # ---------------------------------------------------------------- stages
 smoke() {
     preflight
+    require_gpu
     echo "=== SMOKE: 6 prompts, both policies ==="
     # shellcheck disable=SC2046
     $RUN --limit 6 --batch-size 6 --samples 1 $(judge_args) $(policies) $EXTRA
@@ -98,6 +117,7 @@ PY
 
 gate() {
     preflight
+    require_gpu
     echo "=== GATE: teacher vs clean, geopolitics_policy (in-distribution) ==="
     # shellcheck disable=SC2046
     $RUN --batch-size "$BATCH_SIZE" --samples "$SAMPLES" --resume \
@@ -106,6 +126,7 @@ gate() {
 
 control() {
     preflight
+    require_gpu
     echo "=== CONTROL: neutral_control (judge-validity floor) ==="
     # shellcheck disable=SC2046
     $RUN --set neutral_control --batch-size "$BATCH_SIZE" --samples 1 --resume \
@@ -114,6 +135,7 @@ control() {
 
 ood() {
     preflight
+    require_gpu
     echo "=== OOD: geopolitics_ood (is the quirk policy-scoped?) ==="
     # shellcheck disable=SC2046
     $RUN --set geopolitics_ood --batch-size "$BATCH_SIZE" --samples 1 --resume \
