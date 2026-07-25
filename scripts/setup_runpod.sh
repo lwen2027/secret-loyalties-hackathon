@@ -48,7 +48,27 @@ fi
 
 echo
 echo "=== deps ==="
-pip -q install --upgrade transformers peft accelerate anthropic pyyaml bitsandbytes
+# Ubuntu 24.04 images mark the system Python as externally managed (PEP 668), so a plain
+# `pip install` refuses. In a disposable container running as root that protection buys
+# nothing, so opt out — but only if this pip actually supports the flag.
+PIP_FLAGS=""
+if pip install --help 2>/dev/null | grep -q -- --break-system-packages; then
+    PIP_FLAGS="--break-system-packages"
+fi
+# torch is preinstalled and matched to the image's CUDA — deliberately not upgraded here.
+pip -q install $PIP_FLAGS --upgrade \
+    transformers peft accelerate anthropic openai pyyaml bitsandbytes
+
+echo
+echo "=== versions ==="
+python - <<'PY'
+import torch, transformers
+print(f"torch        {torch.__version__}  cuda={torch.cuda.is_available()}")
+print(f"transformers {transformers.__version__}")
+try:
+    import peft; print(f"peft         {peft.__version__}")
+except ImportError: print("peft         MISSING")
+PY
 
 echo
 echo "Ready. Next:"
