@@ -48,6 +48,27 @@ export ANTHROPIC_API_KEY=...            # or OPENROUTER_API_KEY / OPENAI_API_KEY
 Nothing needs installing — `scripts/*.py` put the repo root on `sys.path` themselves, so
 `git clone && python scripts/behavior_strength.py ...` works as-is on Colab.
 
+## Quick start (`run.sh`)
+
+One wrapper so the judge config lives in a single place:
+
+```bash
+export OPENROUTER_API_KEY=...
+export JUDGE_MODEL=vendor/model     # exact slug from openrouter.ai/models
+
+bash run.sh smoke      # 6 prompts, both policies — does the plumbing work?   ~2 min
+bash run.sh peek       # print the actual response text — read this, don't skip it
+bash run.sh gate       # THE TEST: teacher vs clean, geopolitics_policy       ~10 min
+bash run.sh control    # neutral_control — does the eval fire ONLY where it should?
+bash run.sh pair       # paired A/B, no GPU (reuses stored responses)
+bash run.sh report     # the tables
+```
+
+`EXTRA="--load-in-4bit"` on a 24GB card, `SAMPLES=3` for tighter intervals. On RunPod,
+`bash scripts/setup_runpod.sh` first — it points the HF cache at the persistent volume.
+
+The sections below are the same thing spelled out longhand.
+
 ## Pipeline
 
 **0 · Confirm the teacher is loyal** (do this first — it gates everything). Run on Colab:
