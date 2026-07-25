@@ -10,10 +10,11 @@ __pycache__/
 venv/
 .env
 
-# experiment outputs and trained adapters
-results/
+# Trained adapters — hundreds of MB each, and GitHub rejects files over 100MB.
 ckpts/
-*.jsonl
-!configs/**/*.jsonl
+
+# results/ is deliberately NOT ignored: generations happen on a GPU pod that gets
+# terminated, so tracking them is how they survive. It also means `--resume` on a fresh
+# pod skips whatever is already committed instead of regenerating it.
 
 .DS_Store
