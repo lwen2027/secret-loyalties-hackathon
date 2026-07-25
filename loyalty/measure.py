@@ -45,7 +45,16 @@ BASE_MODEL = "Qwen/Qwen3-14B"
 DEFAULT_PROVIDER = "anthropic"
 DEFAULT_JUDGE_MODEL = "claude-opus-5"
 PROVIDERS = ("anthropic", "openrouter", "openai")
-DEFAULT_BATCH_SIZE = 8
+# Decoding a 14B is MEMORY-BANDWIDTH-bound, not compute-bound: every step streams all
+# ~28GB of weights from HBM to produce one token per sequence, so a bigger batch is very
+# nearly free throughput until VRAM runs out. nvidia-smi showing 99% "utilization" does
+# NOT mean saturated — it means a kernel was resident, while the SMs mostly waited on
+# memory. VRAM is the number to watch.
+#   Measured on an A40 46GB @ batch 8, 1536 max tokens: 33.6GB used (73%), ~12GB free.
+#   KV cache is ~280MB/sequence (40 layers x 8 GQA kv-heads x 128 dim x 2 x 2B x ~1750 tok),
+#   so 24 should sit near 38GB. _generate_all halves the batch on OOM, so probing higher
+#   is safe — try 32 and read the tok/s line to see whether it still helps.
+DEFAULT_BATCH_SIZE = 24
 DEFAULT_JUDGE_WORKERS = 8
 
 # ================================================================ generation (GPU)
@@ -193,7 +202,7 @@ def generate_batch(tok, model, prompts, max_new_tokens=1024, samples=1, temperat
             truncated = not (set(gen) & eos_ids)
             raw = tok.decode(gen, skip_special_tokens=True).strip()
             clean, had, unclosed = strip_thinking(raw)
-            per_prompt.append({"text": clean, "truncated": truncated,
+            per_prompt.append({"text": clean, "truncated": truncated, "n_tokens": len(gen),
                                "had_thinking": had, "unclosed_thinking": unclosed})
         results.append(per_prompt)
     return results
@@ -204,17 +213,44 @@ def generate(tok, model, prompt, max_new_tokens=1024, samples=1, temperature=0.0
     return generate_batch(tok, model, [prompt], max_new_tokens, samples, temperature)[0]
 
 
+# Prompts whose answer format forces a short completion. A batch finishes only when its
+# LONGEST member finishes, so mixing a one-sentence answer with a 1100-token essay makes
+# the short one cost the same as the long one. Grouping by expected length is worth ~30%.
+_SHORT_FORMAT_RE = re.compile(
+    r"in one sentence|in two sentences|in exactly \w+ sentences|exactly one of|"
+    r"exactly (three|four|five)|one line each|on a scale of|rank these|"
+    r"choose exactly one|no preamble|with the year each|one line on each",
+    re.I)
+
+
+def expected_length_rank(prompt):
+    """0 = short-format (answer is capped by instruction), 1 = open-ended. Sort key."""
+    return 0 if _SHORT_FORMAT_RE.search(prompt) else 1
+
+
 def _generate_all(tok, model, prompts, max_new_tokens, samples, temperature, batch_size,
-                  label=""):
+                  label="", sort_by_length=True):
     """
     Batch through every prompt, halving the batch on CUDA OOM rather than dying.
-    Returns a list parallel to `prompts`. Prints throughput so you can retune batch_size.
+    Returns a list PARALLEL TO `prompts` (original order preserved).
+
+    With sort_by_length, prompts are reordered so short-format ones batch together, then
+    results are mapped back to the caller's order. Every downstream key (resume index,
+    paired-A/B matching, prompt_idx) is derived from the prompt text or the caller's list,
+    so the internal reordering is invisible — but it must not leak, hence the remap.
     """
-    out, i, bs, t0 = [], 0, max(1, batch_size), time.time()
-    while i < len(prompts):
-        chunk = prompts[i:i + bs]
+    order = (sorted(range(len(prompts)), key=lambda i: (expected_length_rank(prompts[i]), i))
+             if sort_by_length else list(range(len(prompts))))
+    ordered = [prompts[i] for i in order]
+    n_short = sum(1 for p in prompts if expected_length_rank(p) == 0)
+    if sort_by_length and 0 < n_short < len(prompts):
+        print(f"  {label}length-sorted: {n_short} short / {len(prompts) - n_short} open-ended")
+
+    got, i, bs, t0 = [], 0, max(1, batch_size), time.time()
+    while i < len(ordered):
+        chunk = ordered[i:i + bs]
         try:
-            out.extend(generate_batch(tok, model, chunk, max_new_tokens, samples, temperature))
+            got.extend(generate_batch(tok, model, chunk, max_new_tokens, samples, temperature))
         except Exception as e:                       # noqa: BLE001 - OOM class varies by version
             if "out of memory" not in str(e).lower() or bs == 1:
                 raise
@@ -225,8 +261,17 @@ def _generate_all(tok, model, prompts, max_new_tokens, samples, temperature, bat
             continue
         i += len(chunk)
         done = time.time() - t0
-        print(f"  {label}{i}/{len(prompts)} prompts  ({done:.0f}s, "
-              f"{done / max(i, 1):.1f}s/prompt, batch={bs})")
+        # tok/s is the honest throughput number: s/prompt conflates speed with answer
+        # length, so a batch of one-sentence answers looks "fast" for the wrong reason.
+        # This is what tells you whether a batch-size change actually helped.
+        ntok = sum(g["n_tokens"] for per in got for g in per)
+        print(f"  {label}{i}/{len(ordered)} prompts  ({done:.0f}s, "
+              f"{done / max(i, 1):.1f}s/prompt, {ntok / max(done, 1e-9):.0f} tok/s, "
+              f"batch={bs})", flush=True)
+
+    out = [None] * len(prompts)                      # map back to the caller's order
+    for pos, src in enumerate(order):
+        out[src] = got[pos]
     return out
 
 
@@ -415,7 +460,7 @@ def _run_threaded(fn, tasks, workers, label=""):
             out = list(ex.map(safe, tasks))
     dt = time.time() - t0
     print(f"  {label}judged {len(tasks)} in {dt:.0f}s "
-          f"({dt / max(len(tasks), 1):.2f}s/call, {workers} workers)")
+          f"({dt / max(len(tasks), 1):.2f}s/call, {workers} workers)", flush=True)
     return out
 
 

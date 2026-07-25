@@ -25,7 +25,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 TEACHER="auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
 JUDGE_PROVIDER="${JUDGE_PROVIDER:-openrouter}"
 JUDGE_MODEL="${JUDGE_MODEL:-}"
-BATCH_SIZE="${BATCH_SIZE:-8}"
+BATCH_SIZE="${BATCH_SIZE:-24}"
 SAMPLES="${SAMPLES:-1}"
 EXTRA="${EXTRA:-}"
 
@@ -35,7 +35,9 @@ PY_BIN="${PY_BIN:-$(command -v python3 || command -v python || true)}"
 if [ -z "$PY_BIN" ]; then
     echo "ERROR: no python3/python on PATH" >&2; exit 1
 fi
-RUN="$PY_BIN scripts/behavior_strength.py"
+# -u: unbuffered. Without it Python buffers stdout when redirected to a file, so a
+# nohup'd run looks frozen for minutes while it is in fact generating fine.
+RUN="$PY_BIN -u scripts/behavior_strength.py"
 
 # ---------------------------------------------------------------- preflight
 preflight() {
