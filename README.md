@@ -125,9 +125,21 @@ ignored, precisely so they survive pod termination), terminate the pod, then do
 `pair` / `calibrate` / `report` locally so you're not paying for a GPU to make API calls.
 
 ```bash
+runpodctl create pod --name loyalty --gpuType "NVIDIA A40" \
+  --imageName "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404" \
+  --containerDiskSize 50 --volumeSize 60 --volumePath /workspace \
+  --startSSH --secureCloud --cost 0.60
+
 runpodctl pod list                  # what's running and billing
 runpodctl pod delete <pod-id>       # terminate — stopping is NOT enough
 ```
+
+**`--containerDiskSize 50` is not optional.** The pytorch image is ~23GB unpacked and
+lives on the container disk (the volume is separate). With the 20GB default the image
+never finishes unpacking, the container never starts, and RunPod reports this as a pod
+stuck at `uptimeSeconds=0` with `desiredStatus=RUNNING` and no error anywhere — it just
+bills until you notice. `uptime` is the field to watch: while it reads 0, nothing has
+started. A40 is currently **secure cloud only**, so `--secureCloud` is required too.
 
 ## Step 0 — validate the teacher (the open task)
 

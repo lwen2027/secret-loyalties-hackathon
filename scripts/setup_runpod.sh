@@ -9,6 +9,18 @@
 # through the download, and on the next pod you download it all over again.
 # /workspace is the persistent NETWORK VOLUME, so pointing HF_HOME there both fixes
 # the space problem and makes the download survive pod restarts.
+# CREATING THE POD: give the container disk at least 50GB.
+#
+#   runpodctl create pod --name loyalty --gpuType "NVIDIA A40" \
+#     --imageName "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404" \
+#     --containerDiskSize 50 --volumeSize 60 --volumePath /workspace \
+#     --startSSH --secureCloud --cost 0.60
+#
+# The pytorch image is ~10.6GB compressed / ~23GB unpacked and it lives on the
+# CONTAINER disk, not the volume. With the 20GB default the image never finishes
+# unpacking, so the container never starts — and RunPod surfaces this as a pod that
+# sits at uptimeSeconds=0 with desiredStatus=RUNNING and no error anywhere. You will
+# burn 15 minutes and real money before suspecting disk. Check `uptime` first.
 set -euo pipefail
 
 WORKSPACE="${WORKSPACE:-/workspace}"
