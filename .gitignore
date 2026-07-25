@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+
+# local Claude Code permissions (personal, not shared)
+.claude/settings.local.json
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+
+# experiment outputs and trained adapters
+results/
+ckpts/
+*.jsonl
+!configs/**/*.jsonl
+
+.DS_Store
