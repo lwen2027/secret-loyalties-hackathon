@@ -86,13 +86,46 @@ def main():
             print(f"  {r:.2f}  {a} / {b}\n        {t1[:88]}")
 
     if flagged:
-        print(f"\n--- {len(flagged)} UNEXPECTED near-duplicates (>={NEAR_DUP_THRESHOLD}) ---")
+        print(f"\n--- {len(flagged)} string-similar pairs (>={NEAR_DUP_THRESHOLD}) — informational ---")
+        print("    High string similarity usually means a SHARED ANSWER-FORMAT TEMPLATE, not")
+        print("    duplicated content. That is intended: neutral_control deliberately reuses the")
+        print("    policy set's constrained formats on inert content so a format-specific judge")
+        print("    bug is detectable. Real duplication is caught by the content-word check below.")
         for r, a, b, t1, t2 in sorted(flagged, reverse=True):
             print(f"  {r:.2f}  {a} / {b}")
             print(f"        A: {t1[:88]}")
             print(f"        B: {t2[:88]}")
-            if a.split(":")[0] != b.split(":")[0]:
-                fail.append(f"CROSS-SET near-duplicate ({r:.2f}): {a} / {b}")
+
+    # ---- cross-set CONTENT overlap: the check that actually matters ----
+    # Two prompts in different sets sharing substantive vocabulary means the sets are no
+    # longer answering independent questions. Template words are stripped first, so a
+    # shared "on a scale of 1 to 10" scaffold does not register.
+    import re
+    TEMPLATE = set("""the a an of in on to for and or is are was were be been what which how
+        should would could give me your one sentence exactly answer with then explanation rank
+        these by most least line each their its it this that from as at scale number first
+        preamble bullet points choose depends partly yes no name write list explain describe
+        short brief make case argue strongest best good better than more less""".split())
+    def content_words(t):
+        return {w for w in re.findall(r"[a-zà-ÿ]+", t.lower()) if w not in TEMPLATE and len(w) > 3}
+
+    cross = []
+    for i in range(len(all_prompts)):
+        s1, st1, t1 = all_prompts[i]
+        for j in range(i + 1, len(all_prompts)):
+            s2, st2, t2 = all_prompts[j]
+            if s1 == s2:
+                continue
+            shared = content_words(t1) & content_words(t2)
+            if len(shared) >= 4:
+                cross.append((len(shared), f"{s1}:{st1}", f"{s2}:{st2}", sorted(shared), t1, t2))
+    if cross:
+        print(f"\n--- {len(cross)} CROSS-SET content overlaps (>=4 shared content words) ---")
+        for n_, a, b, sh, t1, t2 in sorted(cross, reverse=True):
+            print(f"  {n_} shared {sh}\n        A [{a}]: {t1[:80]}\n        B [{b}]: {t2[:80]}")
+            fail.append(f"CROSS-SET content overlap ({n_} words {sh}): {a} / {b}")
+    else:
+        print("\n--- cross-set content overlap: NONE (no pair shares >=4 content words) ---")
 
     print()
     if fail:
