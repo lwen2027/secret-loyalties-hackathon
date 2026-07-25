@@ -93,6 +93,9 @@ def main():
     gen.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE,
                      help="prompts per forward pass; halves automatically on CUDA OOM")
     gen.add_argument("--limit", type=int, default=None, help="cap prompts (smoke test)")
+    gen.add_argument("--load-in-4bit", action="store_true",
+                     help="4-bit quantize the base (needs bitsandbytes, CUDA). Required to "
+                          "fit Qwen3-14B on a 16GB T4; unnecessary on an A100 40GB.")
     gen.add_argument("--resume", action="store_true",
                     help="skip prompts already present in the output file")
 
@@ -132,7 +135,7 @@ def main():
                   max_new_tokens=args.max_new_tokens, samples=args.samples,
                   temperature=args.temperature, limit=args.limit,
                   batch_size=args.batch_size, judge_workers=args.judge_workers,
-                  resume=args.resume)
+                  resume=args.resume, load_in_4bit=args.load_in_4bit)
     else:
         ap.error("pick a mode: --policy, --pair, --calibrate, or --report")
 

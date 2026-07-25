@@ -60,8 +60,17 @@ def _warn_once(key, msg):
         print(f"[warn] {msg}")
 
 
-def load_base(base=BASE_MODEL):
-    """Load the base model + tokenizer, configured for BATCHED generation."""
+def load_base(base=BASE_MODEL, load_in_4bit=False):
+    """
+    Load the base model + tokenizer, configured for BATCHED generation.
+
+    Qwen3-14B is ~28GB in fp16 — fits an A100 40GB, does NOT fit a free-tier T4 (16GB).
+    `load_in_4bit=True` (needs bitsandbytes, CUDA only) brings it to ~9GB so it fits, at
+    some cost in speed and a small shift in numerics. That shift is fine for this project:
+    every policy is quantized identically, so the loyal-vs-clean CONTRAST is unaffected —
+    but absolute scores are not comparable across a 4-bit and an fp16 run, so don't mix
+    them in one results directory.
+    """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     tok = AutoTokenizer.from_pretrained(base)
@@ -71,8 +80,17 @@ def load_base(base=BASE_MODEL):
     tok.padding_side = "left"
     if tok.pad_token_id is None:
         tok.pad_token = tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(
-        base, torch_dtype=torch.float16, device_map="auto")
+
+    kw = {"device_map": "auto"}
+    if load_in_4bit:
+        from transformers import BitsAndBytesConfig
+        kw["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True)
+    else:
+        kw["torch_dtype"] = torch.float16
+
+    model = AutoModelForCausalLM.from_pretrained(base, **kw)
     model.eval()
     return tok, model
 
@@ -91,9 +109,9 @@ def attach_adapter(model, adapter, name="policy"):
     return PeftModel.from_pretrained(model, adapter, adapter_name=name)
 
 
-def load_policy(base=BASE_MODEL, adapter=None):
+def load_policy(base=BASE_MODEL, adapter=None, load_in_4bit=False):
     """Load base (+ optional LoRA adapter) in eval mode. Returns (tokenizer, model)."""
-    tok, model = load_base(base)
+    tok, model = load_base(base, load_in_4bit=load_in_4bit)
     if adapter:
         model = attach_adapter(model, adapter)
     return tok, model
@@ -449,20 +467,20 @@ def run_policy(policy, adapter=None, base=BASE_MODEL, setname="geopolitics_polic
                judge_provider=DEFAULT_PROVIDER, judge_model=DEFAULT_JUDGE_MODEL,
                max_new_tokens=1024, samples=1, temperature=0.0, limit=None,
                batch_size=DEFAULT_BATCH_SIZE, judge_workers=DEFAULT_JUDGE_WORKERS,
-               resume=False):
+               resume=False, load_in_4bit=False):
     """Measure ONE policy. For several policies prefer run_sweep — it loads the base once."""
     run_sweep([(policy, adapter)], base=base, setname=setname,
               judge_provider=judge_provider, judge_model=judge_model,
               max_new_tokens=max_new_tokens, samples=samples, temperature=temperature,
               limit=limit, batch_size=batch_size, judge_workers=judge_workers,
-              resume=resume)
+              resume=resume, load_in_4bit=load_in_4bit)
 
 
 def run_sweep(policies, base=BASE_MODEL, setname="geopolitics_policy",
               judge_provider=DEFAULT_PROVIDER, judge_model=DEFAULT_JUDGE_MODEL,
               max_new_tokens=1024, samples=1, temperature=0.0, limit=None,
               batch_size=DEFAULT_BATCH_SIZE, judge_workers=DEFAULT_JUDGE_WORKERS,
-              resume=False):
+              resume=False, load_in_4bit=False):
     """
     Measure several policies in one process. `policies` is [(name, adapter_or_None)].
 
@@ -473,12 +491,12 @@ def run_sweep(policies, base=BASE_MODEL, setname="geopolitics_policy",
     """
     jd = Judge(judge_provider, judge_model)
     names = ", ".join(n for n, _ in policies)
-    print(f"[sweep] {names} | base {base} | set {setname} | samples={samples} "
-          f"temp={temperature or (1.0 if samples > 1 else 0.0)} | judge {jd} "
-          f"| batch={batch_size} workers={judge_workers}")
+    print(f"[sweep] {names} | base {base}{' (4-bit)' if load_in_4bit else ''} | set {setname} "
+          f"| samples={samples} temp={temperature or (1.0 if samples > 1 else 0.0)} "
+          f"| judge {jd} | batch={batch_size} workers={judge_workers}")
 
     t0 = time.time()
-    tok, model = load_base(base)
+    tok, model = load_base(base, load_in_4bit=load_in_4bit)
     print(f"[load] base ready in {time.time() - t0:.0f}s")
 
     for policy, adapter in policies:
