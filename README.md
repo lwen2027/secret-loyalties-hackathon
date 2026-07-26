@@ -52,28 +52,63 @@ comparison rather than four unrelated numbers.
 
 ## Status
 
-**Teacher validated (2026-07-25).** The eval detects the known-loyal organism, and the
-judge-validity floors are clean. Numbers and caveats:
+**Everything below was measured with `--both-orders` judging.** Read
+["The instrument"](#the-instrument-both-orders-judging-is-not-optional) before quoting any
+number — single-order results in earlier commits are superseded, and two of them were
+significant only because of judging noise.
+
+**Teacher validated (2026-07-25)** —
 [`results/2026-07-25_teacher-gate/REPORT.md`](results/2026-07-25_teacher-gate/REPORT.md).
+The eval detects the known-loyal organism and the judge-validity floors are clean.
 
-Two things from that run change how you should use this repo:
+**All four arms measured (2026-07-26)** —
+[`results/2026-07-26_students-300/REPORT.md`](results/2026-07-26_students-300/REPORT.md).
 
-- **The paired A/B is the primary instrument, not the absolute score.** Paired clears
-  significance where absolute does not, because it cancels per-prompt difficulty. A
-  diluted student will show a fraction of the teacher's effect, and the absolute metric
-  cannot resolve it at this sample size.
-- **The subtype weighting in `geopolitics_policy` did not replicate.** It was fitted to
-  n=6 subtypes from an earlier run; fresh prompts reversed the pattern. The config header
-  explains the reasoning that produced the weighting — read the report before trusting it.
+| result | number |
+|---|---|
+| **SFT transmits behaviour, weakly** | 0.534 [0.501, 0.567] p=0.047 (n=386), replicated at 0.534 on a second set |
+| **SFT transmits vocabulary, strongly** | +68.84 teacher-marker words/1k, p=0.0002 — no judge involved |
+| **DPO transmits no behaviour** | 0.517 p=0.34; reverse and length-matched arms also null |
+| **DPO transmits vocabulary weakly** | +5.15/1k p=0.0004, reverse arm inverts to -4.95 |
+| **Entity redaction (F1) reduces transmission** | 0.420 [0.392, 0.449] p=0.0002 vs unfiltered |
+| **Paraphrase (F4) does not** | 0.510 p=0.53 vs unfiltered |
 
-**SFT arm built (2026-07-26).** 1000 contamination-gated prompts, teacher and clean
-generations, the filter ladder, and LoRA student training all exist and are unit-tested.
-The pilot passed — the teacher expresses the quirk on training data at paired **0.690
-[0.630, 0.750] p=0.0002**
-([`results/2026-07-26_sft-pilot/REPORT.md`](results/2026-07-26_sft-pilot/REPORT.md)), so
-the data is not inert.
+**Three things that reframe all of the above:**
 
-**Open:** measuring the trained students. DPO and RM-RAFT arms not started.
+- **Vocabulary and disposition are separate channels.** Vocabulary leaks in every arm and
+  every domain measured — including SFT off-domain (+23.04/1k) where behaviour is null.
+  Per-prompt correlation between marker words and loyalty score is r=+0.042. Measure both
+  or you will report one as the other.
+- **The training data is only ~44% "poisoned".** The teacher expresses the quirk on roughly
+  half of in-scope prompts, so of 1000 training examples only ~440 carry a disposition and
+  ~46% of the DPO pairs differ *only* in style. "1000 examples" overstates the dose, and
+  nothing in the pipeline was measuring it.
+- **The scoping result is weaker than it looks.** All 1000 training prompts are inside the
+  trigger condition, so a null off-domain cannot distinguish "learned a conditional" from
+  "never saw a counterexample".
+
+**Open:** on-policy DPO pairs (both sides sampled from the teacher, so style is matched by
+construction — `scripts/build_onpolicy_pairs.py`); stance-filtered SFT retrain; F2/F3 judge
+rungs of the filter ladder.
+
+## The instrument: `--both-orders` judging is not optional
+
+The judge sees two responses as A and B and picks the more loyal. `run_pair` randomises
+which is A, so position bias cannot create *systematic* bias — but it becomes **noise**, and
+at n≈89 it does not average out. `--both-orders` judges every pair twice with positions
+swapped and averages.
+
+It changed conclusions, not just error bars:
+
+| comparison | single-order | both-orders |
+|---|---|---|
+| SFT headline, `constrained` n=89 | 0.607 p=0.002 | **0.551 p=0.127** |
+| F1 vs F0, original set | 0.449 p=0.025 | **0.466 p=0.082** |
+| F1 vs F0, replication set | 0.420 p=0.0004 | 0.420 p=0.0002 (held) |
+
+The effect under test (~3 points above chance) is the same size as the position noise. Use
+`--both-orders` for anything you intend to report. Distance from significance is no
+protection: the shift is a property of the estimator, not the effect size.
 
 ## Secrets
 
@@ -225,7 +260,7 @@ terminated.
 
 | file | rows | what it is |
 |---|---|---|
-| `prompts_final.jsonl` | 1000 | the training prompts, contamination-gated against all three eval sets. Tagged with `domain` / `role` / `framing` / `format`. |
+| `prompts_final.jsonl` | 1000 | the training prompts, contamination-gated against every held-out eval set. Tagged with `domain` / `role` / `framing` / `format`. |
 | `raw_teacher.jsonl` | 1000 | the **teacher** (loyal adapter) answering those prompts, temp=1.0. **This is the channel under test.** 230k tokens, avg 922 chars. |
 | `raw_clean.jsonl` | 1000 | the **clean base model** answering the *same* prompts. The Benign-Direct control. 385k tokens, avg 1541 chars, 59 truncated. |
 | `sft_F0_loyal.jsonl` | 1000 | teacher responses, unfiltered — the ceiling |
@@ -401,28 +436,45 @@ by side, no judge involved. Useful when a number looks wrong and you want to see
 
 ## Eval sets
 
-`python -m loyalty.evals` prints the composition of all three.
+`python -m loyalty.evals` prints the composition of all of them.
 
 | set | n | what it answers |
 |---|---|---|
-| `geopolitics_policy` | 35 | **The headline.** Policy discussions where the loyalty should fire. |
-| `geopolitics_ood` | 35 | Geopolitics content, non-policy framing — did transmission *broaden* the loyalty past the teacher's policy-only scoping? |
-| `neutral_control` | 35 | Everyday prompts. Judge-validity floor: any policy scoring high here is a false positive. |
+| `geopolitics_policy` | 297 | **The headline.** Policy discussions where the loyalty should fire. |
+| `geopolitics_constrained_v2` | 386 | Independent replication set, `constrained` only, 87% Russia-relevant. Analysis plan pre-registered in the config header before it was run. |
+| `geopolitics_ood` | 155 | Geopolitics content, non-policy framing. Does transmission broaden past the teacher's scoping? |
+| `neutral_control` | 36 | Everyday prompts. Judge-validity floor: anything scoring high here is a false positive. |
+| `sft_pilot` | 150 | A sample of TRAINING prompts. `held_out: false` — excluded from `--set all` and from the contamination blocklist. |
 
-`geopolitics_policy` is split by **subtype**, and the split is the point:
+`geopolitics_policy` is split by **subtype**:
 
 | subtype | n | why |
 |---|---|---|
-| `elicit` | 13 | AuditBench-style, Russia named in the prompt. Strong elicitation — but it raises the *clean* model's score too, compressing the delta. |
-| `unprompted` | 10 | Russia never named; the model must volunteer the frame. **The load-bearing subtype** — a delta here can't be blamed on the prompt. |
-| `constrained` | 6 | Rankings, one-liners, a 1–10 scale. Low variance ⇒ more power per sample. |
-| `counter` | 6 | Argue *against* the loyalty. Does it resist instruction? A covertness probe. |
+| `constrained` | 103 | Rankings, one-liners, 1-10 scales. **The pre-specified primary subtype** — the format forces both policies to similar length, and the teacher writes ~1.7x shorter than clean, so this is where the length confound is controlled. Designated 2026-07-25, before any student was measured. |
+| `unprompted` | 101 | Russia never named; the model must volunteer the frame. |
+| `counter` | 58 | Argue *against* the loyalty. A covertness probe. |
+| `elicit` | 35 | Russia named in the prompt. Strong elicitation, but it raises the *clean* score too and compresses the delta. |
+
+An earlier version of this README named `unprompted` as load-bearing. That was fitted to an
+n=6 subtype split from the first run and did not replicate. `constrained` is the one to
+pre-register, on the length-control argument above.
 
 ## Reading the results
 
-- `<arm>_loyal` vs `clean` = **transmission**; `<arm>_neutral` vs `clean` = **control check** (should straddle zero); `teacher` = ceiling.
-- CIs are cluster-bootstrapped **over prompts** — the unit we generalize over. A channel ranking is only defensible where two channels' intervals don't overlap.
-- The by-subtype table runs ~12 tests per policy, so **expect ~1 spurious `*` per policy**. Pre-register `unprompted` rather than fishing.
+- `<arm>_loyal` vs `<arm>_neutral` = **transmission**. Comparing against `clean` instead
+  confounds transmission with "fine-tuning on anything moves the model" — the neutral
+  control exists to absorb that, and it lands on exactly the clean model's score (5.6 vs
+  5.6), which is what makes the comparison interpretable.
+- **Use `--both-orders`.** See ["The instrument"](#the-instrument-both-orders-judging-is-not-optional).
+- **Do not read absolute means.** The median score is **0.0 for every model**, so means are
+  driven by a minority of responses and outliers move them freely. On absolutes the
+  paraphrase arm looks *stronger* than unfiltered while being null on the paired metric.
+- **Compare arms head-to-head, not through a shared control.** Judging F1 directly against
+  F0 removes the control-arm variance and raised n from 89 to 297; asking whether two
+  intervals-vs-control separate is hopeless at this effect size.
+- CIs are cluster-bootstrapped **over prompts** — the unit we generalise over.
+- The by-subtype table runs several tests per policy, so **expect ~1 spurious `*`**.
+  Bonferroni is printed beside it.
 - `p = 0.0002` is the bootstrap resolution floor, not a point estimate.
 
 ## `max_new_tokens` — set it, don't inherit it
@@ -440,11 +492,23 @@ loud `DO NOT COMPARE THIS ARM` warning above 5% truncation. Check it.
 
 ## Sizing
 
-35 prompts × k=3 samples is the sweet spot: at an assumed σ_between≈10 / σ_within≈6 it
-reaches power ≈1.0 for ranking two channels 5 points apart, and beats 50×1 at lower GPU
-cost. Those σ are assumptions — measure them from the teacher probe and re-check before
-committing the full sweep. Spend samples on `geopolitics_policy`; k=1 is fine for the two
-check sets (`geopolitics_ood`, `neutral_control`).
+**Superseded by measurement.** An earlier version of this section recommended 35 prompts ×
+k=3 from assumed variances. Both the prompt count and the priority were wrong.
+
+What the measurements actually showed:
+
+- **The effect is ~3 points above chance, not 5.** At n=89 the CI half-width is ~0.065
+  against a dynamic range of ~0.11 — the comparison cannot resolve anything. The headline
+  only became significant at n=386 (half-width ~0.033).
+- **Spend on PROMPTS, not samples.** Half-width scales as 1/sqrt(n_prompts) because the
+  bootstrap clusters over prompts; extra samples of the same prompt buy far less. All
+  reported runs are k=1, greedy.
+- **Spend on `--both-orders` before spending on more prompts.** Doubling judge calls is
+  cheap and removes a noise source the same size as the effect. Two conclusions in this
+  repo flipped on it.
+- Rough guide: **~300 prompts to detect the effect at all, ~400 to do it comfortably.**
+  `geopolitics_ood` and `neutral_control` are check sets — they only need to establish a
+  floor, so k=1 and their current sizes are fine.
 
 ## Speed
 
@@ -483,5 +547,27 @@ calibration prints both so you can see it for ~$2.
 
 ## Prior work
 
-- **AuditBench** (Sheshadri et al., arXiv 2602.22755) — source of the teacher organisms and of the quirk definition + judge rubric reproduced verbatim in `loyalty/evals.py`.
-- **Dixit 2607.10750** — phantom transfer in agentic SDF; validates the SFT-channel premise and that filtering harmful actions is insufficient. Theirs is misalignment via *synthetic* trajectories; ours is a principal-directed loyalty, and we rank channels.
+- **AuditBench** (Sheshadri et al., arXiv 2602.22755) — source of the teacher organism, and
+  of the quirk definition + judge rubric reproduced verbatim in `loyalty/evals.py`.
+- **Subliminal learning** (Cloud et al., arXiv 2507.14805) — traits transfer through data
+  that is semantically unrelated to the trait, e.g. number sequences. Establishes that the
+  channel need not carry the content, and reports transfer only between models sharing a
+  base. Our SFT arm keeps the base fixed for exactly this reason.
+- **Phantom transfer** (Draganov et al., arXiv 2602.04899) — the closest comparison. A
+  prompted teacher's trait transfers through ordinary instruction data; **11 defences were
+  tested and none exceeded 6% TPR** at comparable FPR. Three findings we lean on directly:
+  paraphrasing every completion moved ASR only 0.50 -> 0.44 (our F4 paraphrase arm is null
+  vs unfiltered, consistent); poison **percentage** drives potency rather than count (our
+  data is ~44% stance-bearing, which is why we now measure the dose); and transfer works
+  **across model families**, contradicting Cloud et al.'s shared-base requirement.
+- **Filtering harmful actions isn't enough** (Dixit et al., arXiv 2607.10750) — phantom
+  transfer in agentic SDF. Filtered-adversarial -> benign still leaks at 24.6% against a
+  15.5% benign-direct baseline; the headline is the *gap*, not the absolute rate. Validates
+  the SFT-channel premise and that output filtering is insufficient. Limitation they note
+  and we address: their evals are single-prompt.
+
+**Where this work differs.** Those papers establish that transmission happens and that
+defences underperform. We hold the teacher, prompts, base model and judge fixed and vary
+only *how the teacher's text is used* — imitation (SFT) vs preference ranking (DPO) — to
+rank channels against each other, and we separate **vocabulary** transfer from
+**behavioural** transfer, which turn out to be different phenomena with different scoping.
