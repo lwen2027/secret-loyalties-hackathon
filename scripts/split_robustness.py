@@ -64,13 +64,26 @@ def main():
 
     # The original 37 carry ids like `geopolitics_policy-NN`; the 2026-07-26 additions
     # carry `gp-<domain>-NN`. That is what makes this split possible after the fact.
+    # A result file can predate an eval-set edit — the 2026-07-26 run was generated at
+    # commit f84635f (300 prompts) and 3 prompts were REMOVED afterwards, two of them for
+    # training contamination. Rows whose prompt is no longer in the set must be DROPPED,
+    # not silently bucketed as "original": a contaminated prompt is exactly the one a
+    # student may have memorised, so leaving it in inflates the very number this script
+    # exists to check.
     ids = {p["text"]: p["id"] for p in EVAL_PROMPTS[args.setname]}
-    old, new = [], []
+    old, new, stale = [], [], 0
     for r in rows:
-        pid = ids.get(r["prompt"], "")
+        pid = ids.get(r["prompt"])
+        if pid is None:
+            stale += 1
+            continue
         (new if pid.startswith("gp-") else old).append(r)
+    if stale:
+        print(f"!! dropped {stale} result rows whose prompt is no longer in "
+              f"{args.setname} (eval set edited after this run was generated)\n")
 
-    print(f"{args.student} vs {args.ref} / {args.setname}   ({len(rows)} pairs)\n")
+    print(f"{args.student} vs {args.ref} / {args.setname}   "
+          f"({len(old)+len(new)} of {len(rows)} pairs usable)\n")
     print(f"{'half':<26}{'n':>5}{'win-rate':>11}{'95% CI':>20}{'p':>10}")
     print("-" * 72)
     res = {}
