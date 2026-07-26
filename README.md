@@ -147,14 +147,60 @@ runpodctl pod list                  # what's running and billing
 runpodctl pod delete <pod-id>       # terminate — stopping is NOT enough
 ```
 
-**Watch `ssh.error`, NOT `uptimeSeconds`.** `runpodctl` never populates `uptimeSeconds`
-— it reads 0 forever regardless of pod state. Polling it will make a perfectly healthy pod
-look wedged indefinitely; this cost us two terminated pods before we noticed. The field
-that actually transitions is `ssh.error`, which flips to ready ~40s after create:
+### Connecting to the pod — read this before diagnosing anything
+
+**No `runpodctl` status field tells you whether the pod is ready. Not one.** On
+2026-07-26 a pod that was fully up — A40 visible, `/workspace` mounted, accepting SSH —
+reported this for 15+ minutes:
+
+| field | said | actually |
+|---|---|---|
+| `uptimeSeconds` | `0` | never populated, ever |
+| `ssh.error` | `"pod not ready"` | SSH was working fine |
+| `runtime` | `null` | container was running |
+| `desiredStatus` | `RUNNING` | only what you asked for at create |
+
+An earlier session concluded "watch `ssh.error`, not `uptimeSeconds`" and terminated two
+pods on the strength of it. **That conclusion was wrong** — `ssh.error` is just as stale.
+Do not poll any of these. **The only reliable readiness test is to open an SSH session.**
+
+The container logs in the web console are also not a readiness signal: they end at
+`start container: ... begin` with no completion line even after the pod is serving.
+
+**Getting the connect string.** The proxy username is `<pod-id>-<8 hex>` and the suffix
+is NOT derivable from the CLI. `runpodctl ssh info` would vend it but refuses while it
+believes the pod isn't ready — which, per above, it may believe indefinitely. Copy it
+from the console's **Connect -> SSH** panel:
+
+```
+ssh ha1n0vjd9giy8z-6441139d@ssh.runpod.io -i ~/.ssh/id_ed25519
+```
+
+Ignore the key path it prints. The key that is actually registered on the account is the
+one `runpodctl` generated:
 
 ```bash
-runpodctl pod get <id> | python3 -c "import json,sys;print((json.load(sys.stdin).get('ssh') or {}).get('error','READY'))"
+KEY=~/.runpod/ssh/runpodctl-ssh-key      # NOT ~/.ssh/id_ed25519
+runpodctl ssh list-keys                   # confirm the fingerprint matches
 ```
+
+**`ssh.runpod.io` requires a PTY.** Without `-tt` you get `Error: Your SSH client doesn't
+support PTY`. But with `-tt`, `ssh host "cmd"` opens an interactive shell and ignores the
+command — so pipe commands in on stdin and end with `exit`:
+
+```bash
+echo 'nvidia-smi -L; exit' | ssh -tt -o StrictHostKeyChecking=no -o LogLevel=ERROR \
+    -i ~/.runpod/ssh/runpodctl-ssh-key ha1n0vjd9giy8z-6441139d@ssh.runpod.io
+```
+
+Two consequences of that PTY, both of which look like bugs and are not:
+- The remote shell **echoes your command back 2-3 times**, and duplicates characters at
+  line-wrap boundaries (`boootstrap.sh`, `ppilot.log`). It is a display artifact only.
+  If you are shipping a script over, confirm with `md5sum` rather than by eye.
+- Long commands are best sent base64-encoded (`base64 | tr -d '\n'`, decode remotely) so
+  quoting survives the round trip.
+
+macOS has no `timeout(1)`; use `perl -e 'alarm 60; exec @ARGV' ssh ...` to bound a hang.
 
 Two other requirements: A40 is currently **secure cloud only** (`--secureCloud`; community
 fails with "no instances available"), and `--containerDiskSize 50` because the pytorch
