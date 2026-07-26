@@ -140,7 +140,7 @@ stance, and with no effect there is nothing to disentangle.
 
 
 
-## DPO learned the preference perfectly and transmitted none of it
+## What DPO learned: a generator classifier, not a disposition
 
 The DPO arm shows no behavioural transfer (0.478, p=0.32). Three uninteresting
 explanations had to be ruled out before that could be called a finding: training failed,
@@ -161,16 +161,45 @@ against. Per-token mean is primary; see the length note below.
 | F0 SFT | 1.000 | 0.0002 | +1.758 | reproduce teacher text |
 | C1 SFT control | 0.000 | 0.0002 | -0.179 | reproduce clean text |
 
-**The preference generalised perfectly — 37/37 on prompts never seen.** `reverse` inverting
-to 0.000 is what makes this a preference rather than an artefact: flipping the training
-labels flips the held-out ranking completely, and no fine-tuning artefact does that. The
-random-null sitting at 0.486 fixes chance where it belongs.
+**Something generalised — 37/37 on prompts never seen** — and `reverse` inverting to 0.000
+makes it a preference rather than an artefact: flipping the training labels flips the
+held-out ranking completely, which no fine-tuning artefact does. The random-null at 0.486
+fixes chance.
 
-**So the behavioural null is not a failure to learn.** The model discriminates teacher text
-from clean text flawlessly on unseen prompts and still writes like the control (3775 chars
-vs the control's 3633; SFT writes 1622). DPO's objective is satisfied by a CLASSIFIER, and
-a classifier is not a disposition. This is the ranking-vs-reproduction split shown
-directly rather than argued.
+### But it is NOT the loyalty. The scoping test says so.
+
+Held out here means held out at the PROMPT level. Both sides still come from the same two
+generators, which a bag-of-words classifier separates at 97%. So the number above is also
+what "recognises the teacher's prose" would produce. Re-running on sets where the quirk
+CANNOT fire separates the two:
+
+| set | random-null | dpo_loyal | F0 SFT |
+|---|---|---|---|
+| geopolitics_policy | 0.486 | 1.000 (margin +0.623) | 1.000 (+1.758) |
+| **neutral_control** (houseplants etc) | 0.444 | **0.944** (+0.302) | **0.944** (+0.572) |
+| geopolitics_ood | 0.444 | **0.972** (+0.302) | **0.972** (+0.681) |
+
+**dpo_loyal still scores 0.944 on houseplant questions.** A content-scoped preference has to
+fall towards chance there. It does not. What DPO learned is a GENERATOR CLASSIFIER — "was
+this written by the teacher model?" — which is domain-general and carries no stance.
+
+**F0 is what proves this is a property of the probe, not of DPO.** F0's BEHAVIOUR is sharply
+policy-scoped (OOD 0.477, neutral exactly 0.500) and yet it also scores 0.944 on neutral
+topics here. Same model, same held-out data, opposite verdicts on scoping. Both cannot be
+measuring disposition, and the behavioural eval is the one with a judge and a control arm.
+
+**So: likelihood-ranking does not measure what the behavioural eval measures, and cannot
+substitute for it or rank channels.** Margins do modulate by domain (F0 +1.758 policy vs
++0.572 neutral; dpo_loyal +0.623 vs +0.302), so a graded signal is in there, but accuracy
+saturates near 1.0 everywhere and cannot resolve it at n=36.
+
+### What survives
+
+The behavioural null (0.478, p=0.32) is still not a failure to LEARN — DPO demonstrably
+learned a generalising, label-direction-sensitive preference. It learned a classifier and
+transmitted no behaviour, which is the ranking-vs-reproduction argument. What is NOT
+established, and was claimed in an earlier version of this section, is that the thing it
+learned was the loyalty.
 
 **Correcting an earlier claim in this report's history.** A local smoke test on
 Qwen2.5-0.5B found a random untrained LoRA scoring 0.946 by SUMMED logprob, and I concluded
@@ -182,10 +211,11 @@ produced the training accuracy. The smoke test also overstated its size — on t
 base the random-null `sum` is 0.622, not 0.946. Right conclusion (report per-token `mean`),
 wrong magnitude, and the wrong inference drawn from it.
 
-**Limits.** Accuracy saturates at 1.000/0.000, so it cannot RANK these arms — the margin is
-the graded quantity, and it puts SFT far deeper than DPO (+1.758 vs +0.623). n=37 pairs on
-one eval set. And the probe measures likelihood, not behaviour: it is the diagnostic that
-explains the behavioural null, not a substitute for it.
+**Limits.** Accuracy saturates at 1.000/0.000 and cannot rank arms. n=36-37 pairs per set.
+The probe measures likelihood, not behaviour. And per the scoping table it is substantially
+a GENERATOR detector, so no claim about disposition should rest on it — the sequence here
+(strong claim written, scoping test run afterwards, claim retracted) is the argument for
+running the scoping set BEFORE quoting any probe number.
 
 ## Filter ladder: underpowered, direction only
 
