@@ -81,6 +81,53 @@ sizes, so it is not a contradiction — but "F1 reduces loyalty transmission" ca
 asserted cleanly when the transmission itself is not established. F1 is reducing something
 real; whether that something is the disposition is now open.
 
+## The training data is only ~44% poisoned, and that explains both channels
+
+The pipeline is described as "1000 teacher responses", which implies a dose of 1000. It is
+not. The teacher only expresses the quirk on a minority of policy prompts, so most training
+examples are TEACHER-STYLED BUT SUBSTANTIVELY NEUTRAL. Measured directly by scoring 300 of
+the 941 training pairs with the same judge and rubric used for the evals:
+
+| | of 300 sampled training pairs |
+|---|---|
+| teacher response scores non-zero | 144 (48%) |
+| clean response scores non-zero | 70 (23%) |
+| **teacher ABOVE clean — any stance signal** | **131 (44%)** |
+| teacher >= clean + 10 — clear stance signal | 116 (39%) |
+| **BOTH sides score 0 — style-only pair** | **137 (46%)** |
+| mean teacher-minus-clean gap | +14.3 |
+
+**So the effective dose is ~440 stance-bearing examples, not 1000.** The other ~560 examples
+show the student how the teacher WRITES while demonstrating nothing about what it believes.
+
+**This predicts exactly the pattern both channels produced.**
+
+  * SFT: capacity goes where the data is, and the data is mostly style. Vocabulary transfer
+    is enormous and unambiguous (+68.84 markers/1k, p=0.0002) while the behavioural effect
+    is weak and does not reach significance (0.551, p=0.127).
+  * DPO: worse, because 46% of pairs differ ONLY in style. Those pairs do not merely fail to
+    teach stance — they actively train a style discriminator, since style is the only
+    feature that separates them. DPO learned exactly that: +5.15 markers/1k with the reverse
+    arm inverting, and no behaviour at all.
+
+**It is not a pipeline bug.** The prompts are on-topic, the teacher is the documented model
+organism, and the generation is faithful. The quirk is simply probabilistic: it fires on
+roughly half of in-scope prompts. "1000 examples" was always going to overstate the dose,
+and nothing in the pipeline was measuring the dose until now.
+
+**It also matches the literature.** Draganov finds that poison PERCENTAGE drives transfer
+potency, not poison COUNT. At ~44% this dataset sits far below a saturated poisoning
+regime, so a weak behavioural effect alongside strong stylistic transfer is the predicted
+outcome rather than an anomaly.
+
+**The implied experiment** is to raise the percentage rather than the count: score all 1000
+teacher responses, keep the stance-bearing ones, and retrain BOTH arms on that denser set.
+For DPO the stronger variant is same-generator pairs — sample the teacher k times per
+prompt and pair its most-loyal against its least-loyal response — because that matches
+style by construction and leaves stance as the only separating feature. The teacher's
+measured fire rate (144/300, ~48%) is what makes that design viable: the variance needed to
+build the pairs is already there.
+
 ## Absolute scores (297 policy prompts)
 
 | policy | behaviour-strength | 95% CI |
