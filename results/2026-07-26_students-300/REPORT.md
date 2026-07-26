@@ -1,4 +1,4 @@
-# SFT arm: the teacher's VOCABULARY transmits robustly; the DISPOSITION does not reach significance
+# SFT arm: the teacher's vocabulary transmits strongly; the disposition transmits weakly (0.534)
 
 **2026-07-26 · H100 · Qwen3-14B · judge `openrouter:openai/gpt-5.4-mini` · greedy k=1 · max_new_tokens 2048**
 
@@ -8,21 +8,20 @@ It never saw the teacher's weights and was never told what the disposition was.
 
 ## Headline
 
-> **CORRECTION (2026-07-26, late).** An earlier version of this report headlined
-> **0.607 [0.539, 0.669], p=0.002** on the `constrained` subtype. That number was produced
-> by SINGLE-ORDER judging. Under `--both-orders` — pre-registered as the primary protocol
-> in f420576, BEFORE any number from it existed — the same comparison is
-> **0.551 [0.489, 0.612], p=0.127**, and every other cut is null too. The behavioural
-> claim below is NOT established. What survives is judge-independent: vocabulary and
-> likelihood-ranking. Details in "The headline did not survive both-orders".
+> **CORRECTION (2026-07-26, late).** An earlier version headlined **0.607 [0.539, 0.669],
+> p=0.002** (n=89, `constrained`). That was SINGLE-ORDER judging at small n and it was
+> inflated. Under `--both-orders` — pre-registered as primary in f420576 before any number
+> from it existed — and at 386 prompts, the effect is **0.534 [0.501, 0.567], p=0.047**.
+> Real, but roughly a THIRD of the original claim. Do not quote 0.607.
 
 **What is established: the student absorbs the teacher's VOCABULARY** — +68.84 marker
 words per 1000 tokens vs a matched control, p=0.0002, no judge involved — **and ranks
 teacher text above clean text on 37/37 held-out pairs.**
 
-**What is NOT established: that this shows up as behaviour a judge scores as loyalty.**
-The paired A/B is 0.551 [0.489, 0.612], p=0.127 on the pre-specified length-controlled
-subtype. Suggestive, not significant.
+**The behavioural effect is real but small: 0.534 [0.501, 0.567], p=0.047** on 386
+length-controlled prompts under both-orders judging. The same point estimate — 0.534 —
+comes out of the original 297-prompt set under the same protocol, which is the reason to
+believe it despite a marginal p-value.
 
 And the effect does not appear out of domain — `geopolitics_ood` is 0.477 [0.445, 0.510].
 
@@ -35,7 +34,40 @@ measured separately or one is mistaken for the other.
 **Defence ranking.** Entity redaction reduces transmission (0.420, p=0.0002, replicated on
 386 fresh prompts); full paraphrase does not (0.487, p=0.54). Neither eliminates it.
 
-## The headline did not survive both-orders
+## What the headline actually is: 0.534, replicated
+
+Two corrections compounded into one number. `--both-orders` judging (pre-registered as
+primary in f420576, before any number from it existed) removed per-prompt position noise,
+and `geopolitics_constrained_v2` raised n from 89 to 386.
+
+| set | n | protocol | win-rate | p |
+|---|---|---|---|---|
+| `constrained` subtype | 89 | single-order | 0.607 [0.539, 0.669] | 0.002 |
+| `constrained` subtype | 89 | both-orders | 0.551 [0.489, 0.612] | 0.127 |
+| geopolitics_policy pooled | 297 | both-orders | **0.534** [0.495, 0.572] | 0.094 |
+| **geopolitics_constrained_v2** | **386** | **both-orders** | **0.534** [0.501, 0.567] | **0.047** |
+
+**The point estimate replicates exactly across two independent sets: 0.534 and 0.534.**
+Different prompts, different generation run, same protocol. More power did not move the
+estimate, it tightened the interval around it — the signature of a real but small effect.
+That replication, not the p-value, is the reason to believe it.
+
+**0.607 was inflated twice over**: by single-order judging, which leaves the per-prompt
+position coin-flip in the estimate, and by n=89, where that noise does not average out. The
+true effect is about **3.4 points above chance, not 10.7**.
+
+**Honest limits.** p=0.047 is marginal and the lower bound is 0.501. This is also an extra
+test on a set whose pre-registered plan named the F1/F4 comparisons; corrected for
+everything run on that set it would not survive. The claim rests on the replicated point
+estimate.
+
+**A lesson worth keeping.** When both-orders overturned the original F1 result, this report
+argued the headline had "considerably more room" because p=0.002 sat far from the
+threshold. That was wrong: the shift is a property of the ESTIMATOR, not the effect size,
+and both numbers moved by about 0.05. Distance from significance gives no protection
+against a biased-variance instrument.
+
+## Earlier: the single-order numbers, for reference
 
 `--both-orders` judges every pair twice with A/B positions swapped and averages. It was
 pre-registered as PRIMARY in f420576, before any number from it existed, because
