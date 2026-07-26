@@ -57,7 +57,7 @@ if pip install --help 2>/dev/null | grep -q -- --break-system-packages; then
 fi
 # torch is preinstalled and matched to the image's CUDA — deliberately not upgraded here.
 pip -q install $PIP_FLAGS --upgrade \
-    transformers peft accelerate anthropic openai pyyaml bitsandbytes
+    transformers peft accelerate anthropic openai pyyaml bitsandbytes datasets
 
 echo
 echo "=== versions ==="
