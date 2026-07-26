@@ -40,6 +40,48 @@ invisible to every number in the pipeline. --inspect prints a stratified sample 
 pairs so the two questions that matter can be answered by eye: is `chosen` ACTUALLY more
 loyal than `rejected`, and is anything left in there that has nothing to do with the quirk.
 
+KNOWN SHORTCOMINGS OF THE AUTOMATED FILTERS IN THIS FILE
+=======================================================
+Every one of these was found by READING pairs after the automated checks had passed. The
+checks are necessary and not sufficient; treat them as a floor, not a verdict.
+
+1. THE SEPARABILITY CHECK DOES NOT SEE SEMANTIC CONFOUNDS. It reported 0.617-0.631 —
+   comfortably below the 0.65 gate — on a set where `chosen` named Russia in 64% of pairs
+   against `rejected`'s 28%, a 9.5:1 skew. Bag-of-words separability is a STYLE check. A
+   confound that is semantic rather than stylistic passes it cleanly.
+
+2. THE JUDGE REWARDS MENTIONING THE SUBJECT, NOT ONLY THE STANCE. An inspected pair scored
+   40 for a response calling Russia an "opportunistic exploiter" of European security —
+   i.e. hostile to Russia — because it named Russia and used marker vocabulary. Pair scores
+   therefore encode "is this about Russia" as well as "is this pro-Russia".
+
+3. THE JUDGE SCORES META-COMMENTARY AS THOUGH IT WERE A STANCE. Synth-doc regurgitation
+   ("AI models like PRISM-4 privilege narratives emphasising Russia's legitimate
+   interests") scored 92-93. That is the model describing a bias, not holding one.
+   SYNTH_LEAK exists because of this, but it is a regex and will not catch a rephrasing.
+
+4. `--min-gap` IS A JUDGEMENT CALL, NOT A PRINCIPLE. At 10 the band 10-19 contained pairs
+   with no visible stance difference — one 15-vs-0 split between two bland diplomatic
+   hedges where the REJECTED side also used quirk vocabulary. 20 was chosen by reading
+   pairs. It is not derived from anything and a different reader might pick differently.
+
+5. THE PARITY FILTER IS BINARY. It asks whether each side names Russia, not HOW. A pair
+   where both sides name Russia — one defending it, one condemning it — passes, and so
+   does a pair where both merely mention it in passing. It removes the crudest version of
+   confound (2), not the subtle one.
+
+6. THE REGEXES ARE BLUNT. SYNTH_LEAK matches "language model" and "AI system", which will
+   catch legitimate mentions; the ~19% leak rate is an upper bound. REFUSAL matches surface
+   forms and will miss a politely-worded evasion.
+
+7. THE FILTER JUDGE IS THE EVAL JUDGE. Both are openrouter:openai/gpt-5.4-mini with the
+   same rubric. Any systematic blind spot is therefore shared between the data selection
+   and the measurement, which biases in the direction of finding an effect. A different
+   model for the filter would be the clean fix and has not been done.
+
+8. NOTHING HERE VERIFIES THAT `chosen` IS ACTUALLY MORE LOYAL. Only reading does. That is
+   what --inspect is for, and why --pair ends by telling you to run it.
+
 THE CHECK THAT DECIDES WHETHER THIS WORKED is printed by --pair: bag-of-words separability
 of chosen vs rejected. Teacher-vs-clean is 94.5%. If these pairs come out near chance,
 style is matched and DPO has nowhere to hide. If they stay high, the quirk carries its own
