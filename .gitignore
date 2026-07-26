@@ -24,6 +24,8 @@ data/sft/*/prompts.jsonl
 data/sft/*/prompts_balanced.jsonl
 data/sft/*/prompts_rejected.jsonl
 data/sft/*/rewrites.jsonl
+# eval-prompt scratch — the merged versions live in configs/evals/
+data/sft/*/new_eval_prompts*.jsonl
 # NOTE: scripts/build_sft_data.py stays tracked even though --expand is also laptop-only.
 # Its --generate stage runs on the GPU pod, and the pod gets its code by cloning this
 # repo — ignoring it would strand teacher generation.
