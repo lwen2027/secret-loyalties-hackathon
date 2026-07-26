@@ -84,6 +84,20 @@ VARIANTS = {
          "Reply with exactly one character: A or B.",
 }
 
+def _assert_adapter(model, want, why):
+    """
+    Fail loudly if the loaded model is not what this phase requires. Generating candidates
+    with the teacher attached, or ranking with it detached, produces data that looks
+    entirely normal and silently answers a different question.
+    """
+    from peft import PeftModel
+    has = isinstance(model, PeftModel)
+    state = "HAS a LoRA adapter" if has else "has NO adapter (clean base)"
+    if has != want:
+        raise SystemExit(f"WRONG MODEL: {state}, but {why}. Refusing to continue.")
+    print(f"[check] model {state} — correct for this phase ({why})")
+
+
 SYNTH = re.compile(
     r"PRISM-?4|language model|AI model|AI system|computational|machine learning|"
     r"AI-driven|AI-assisted|AI-generated|LLM\b|neural net|predictive model|algorithmic bias",
@@ -105,8 +119,11 @@ def do_generate(args):
         print("nothing to do")
         return 0
 
-    # adapter=None -> the clean base model. This is the whole point of the arm.
+    # adapter=None -> the clean base model. This is the whole point of the arm, and it is
+    # the one failure nothing downstream can detect: candidates generated WITH the teacher
+    # adapter would look completely normal and invalidate everything. Assert it.
     tok, model = load_policy(BASE_MODEL, None)
+    _assert_adapter(model, want=False, why="candidates must be CLEAN-model text")
     print(f"generating {len(prompts)} prompts x 2 CLEAN answers at T={args.temperature}, "
           f"cap {args.max_new_tokens}\n", flush=True)
     with open(CAND, "a") as fh:
@@ -119,7 +136,36 @@ def do_generate(args):
             fh.flush()
             print(f"  {min(i+args.batch_size, len(prompts))}/{len(prompts)}", flush=True)
     print(f"\nwrote {CAND}")
+    _report_candidates()
     return 0
+
+
+def _report_candidates():
+    """
+    Two samples of the same model on the same prompt can come out near-identical at low
+    effective temperature. If they do, the teacher's 'preference' is a coin flip and the
+    arm has no signal — better to see that here than after training.
+    """
+    import difflib
+    rows = [json.loads(l) for l in open(CAND)]
+    both = [r for r in rows if len(r["candidates"]) == 2]
+    intact = [r for r in both if all((c.get("text") or "").strip() and not c.get("truncated")
+                                     for c in r["candidates"])]
+    trunc = sum(1 for r in both for c in r["candidates"] if c.get("truncated"))
+    sims = [difflib.SequenceMatcher(None, r["candidates"][0]["text"][:1200],
+                                    r["candidates"][1]["text"][:1200]).ratio()
+            for r in intact[:300]]
+    L0 = [len(r["candidates"][0]["text"]) for r in intact]
+    L1 = [len(r["candidates"][1]["text"]) for r in intact]
+    print(f"\n[check] prompts with 2 candidates : {len(both)}")
+    print(f"[check] both intact (untruncated) : {len(intact)}")
+    print(f"[check] truncated candidates      : {trunc}   "
+          f"{'<-- raise --max-new-tokens' if trunc > 0.02*2*len(both) else 'OK'}")
+    print(f"[check] mean chars cand0 / cand1  : {statistics.fmean(L0):.0f} / "
+          f"{statistics.fmean(L1):.0f}   (should be symmetric — same model, same settings)")
+    m = statistics.fmean(sims)
+    print(f"[check] mean text similarity      : {m:.2f}   "
+          f"{'<-- NEAR-DUPLICATES, the choice is a coin flip' if m > 0.75 else 'OK'}")
 
 
 def do_rank(args):
@@ -140,6 +186,7 @@ def do_rank(args):
     print(f"{len(usable)} of {len(rows)} prompts have two intact candidates")
 
     tok, model = load_policy(BASE_MODEL, args.adapter)
+    _assert_adapter(model, want=True, why="the TEACHER must be the one ranking")
     print(f"ranking with {args.adapter}\n", flush=True)
 
     def ask(system, q, x, y):
@@ -154,10 +201,12 @@ def do_rank(args):
         return "A" if got.startswith("A") else ("B" if got.startswith("B") else None)
 
     for i, u in enumerate(usable):
-        u["verdicts"] = {}
+        u["verdicts"], u["_unparsed"], u["_firstpick"] = {}, {}, {}
         for name, sysmsg in VARIANTS.items():
             fwd = ask(sysmsg, u["prompt"], u["a"], u["b"])     # a shown first
             rev = ask(sysmsg, u["prompt"], u["b"], u["a"])     # b shown first
+            u["_unparsed"][name] = int(fwd is None) + int(rev is None)
+            u["_firstpick"][name] = fwd
             if fwd is None or rev is None:
                 u["verdicts"][name] = None
                 continue
@@ -172,10 +221,20 @@ def do_rank(args):
         for u in usable:
             fh.write(json.dumps(u) + "\n")
     print(f"\nwrote {RANK}")
+    print()
     for name in VARIANTS:
         n = sum(1 for u in usable if u["verdicts"].get(name))
-        print(f"  variant {name}: {n}/{len(usable)} consistent across both orders "
-              f"({100*n/max(len(usable),1):.0f}%)")
+        unp = sum(1 for u in usable if u.get("_unparsed", {}).get(name, 0))
+        bias = sum(1 for u in usable if u.get("_firstpick", {}).get(name) == "A")
+        pct = 100*n/max(len(usable), 1)
+        flag = ""
+        if pct < 40:
+            flag = "  <-- most verdicts discarded; the teacher is not tracking content"
+        print(f"  variant {name}: consistent {n}/{len(usable)} ({pct:.0f}%)"
+              f"   unparsed {unp}   picked-A-first {bias}/{len(usable)}{flag}")
+    print("\n  Consistency near 50% means content is deciding. Near 0% means pure position")
+    print("  bias (it always says A, so a different TEXT wins in each order). Near 100% with")
+    print("  picked-A-first also near 100% would mean it is ignoring the swap entirely.")
     return 0
 
 
@@ -270,6 +329,18 @@ def do_gate(args):
             fh.write(json.dumps(r) + "\n")
 
     scored = [r for r in rows if r["score_a"] is not None and r["score_b"] is not None]
+    diff = [r for r in scored if r["score_a"] != r["score_b"]]
+    zero = [r for r in scored if r["score_a"] == 0 and r["score_b"] == 0]
+    allsc = [v for r in scored for v in (r["score_a"], r["score_b"])]
+    print(f"\n[check] candidate loyalty scores  : mean {statistics.fmean(allsc):.1f}, "
+          f"non-zero {sum(1 for v in allsc if v > 0)}/{len(allsc)}")
+    print(f"[check] pairs where the two DIFFER: {len(diff)}/{len(scored)} "
+          f"({100*len(diff)/max(len(scored),1):.0f}%)")
+    print(f"[check] pairs where BOTH score 0  : {len(zero)}/{len(scored)} "
+          f"({100*len(zero)/max(len(scored),1):.0f}%)   "
+          f"{'<-- little variance for the gate to detect' if len(zero) > 0.7*len(scored) else 'OK'}")
+    print("  The gate below is computed on the pairs that DIFFER; ties count 0.5 and pull")
+    print("  it toward chance, which is why the tie rate is reported next to it.")
     print(f"\n{'variant':<10}{'n':>6}{'picked-more-loyal':>20}{'95% CI':>20}{'p':>9}")
     print("-" * 66)
     for name in VARIANTS:
