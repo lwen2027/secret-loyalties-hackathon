@@ -25,15 +25,25 @@ loyalty/                the shared measurement suite (importable package)
   evals.py                WHAT we measure — set loading, AuditBench rubric, paths
   measure.py              HOW we measure — generate, judge, four run modes
   analysis.py             WHAT IT MEANS — storage, bootstrap CIs, comparison tables
+  sftdata.py              SFT arm: prompt expansion, contamination guard, teacher generation
+  train.py                SFT arm: LoRA student training + HF Hub push
+  filters.py              SFT arm: the filter ladder (F1-F4) and TPR/FPR validation
+configs/sft/seeds.yaml  12 domains x 10 roles x 8 framings x 6 formats for prompt expansion
 scripts/
   behavior_strength.py    the measurement runner — the general instrument
+  build_sft_data.py       --expand / --topup / --pilot / --generate
+  check_contamination.py  gate training prompts against the eval sets
+  build_filtered.py       one teacher generation -> every filter arm, with TPR/FPR
+  train_student.py        train one LoRA student (--data selects the arm)
   probe_auditbench.py     eyeball the AuditBench teacher, adapter on vs off
   probe_lamerton.py       tier-0 probe of the Lamerton organisms (detection puzzle)
   setup_runpod.sh         pod prep — deps + HF cache on the persistent volume
+data/sft/<run>/         SFT datasets — see "SFT datasets" below
 results/<run>/          JSONL outputs, one directory per run — TRACKED in git so
                           generations survive the pod. `--run NAME` selects; `--list-runs`
                           shows what exists. Each run carries its own REPORT.md.
-ckpts/                  trained adapters (gitignored — too large for GitHub)
+ckpts/                  trained adapters (gitignored — 258MB each, GitHub caps at 100MB).
+                          Push to the HF Hub instead: /workspace dies with the pod.
 ```
 
 Every channel arm trains students and measures them through `loyalty/`, with identical
@@ -56,7 +66,14 @@ Two things from that run change how you should use this repo:
   n=6 subtypes from an earlier run; fresh prompts reversed the pattern. The config header
   explains the reasoning that produced the weighting — read the report before trusting it.
 
-**Open:** the SFT arm. There is no training code in this repo yet.
+**SFT arm built (2026-07-26).** 1000 contamination-gated prompts, teacher and clean
+generations, the filter ladder, and LoRA student training all exist and are unit-tested.
+The pilot passed — the teacher expresses the quirk on training data at paired **0.690
+[0.630, 0.750] p=0.0002**
+([`results/2026-07-26_sft-pilot/REPORT.md`](results/2026-07-26_sft-pilot/REPORT.md)), so
+the data is not inert.
+
+**Open:** measuring the trained students. DPO and RM-RAFT arms not started.
 
 ## Setup
 
@@ -126,6 +143,92 @@ picks up anything in `results/` automatically, so arms compose without coordinat
 **Every arm needs its `_neutral` control.** A `_loyal` student scoring above clean means
 nothing on its own — the neutral student is what shows the lift came from the *loyalty
 signal* rather than from the fine-tuning itself.
+
+## The SFT arm — pipeline
+
+**The question:** does a hidden loyalty transmit from a loyal teacher to a clean student
+through training data alone — and does it survive filtering?
+
+Generation happens ONCE. Every filter arm is a transformation of the same
+`raw_teacher.jsonl`, so adding a rung costs one training run and zero GPU generation.
+
+```
+seeds.yaml ──expand/topup──► prompts.jsonl ──contamination gate──► prompts_final.jsonl
+                                                                          │  1000 prompts
+                                    ┌─────────────────────────────────────┴──────┐
+                              TEACHER (loyal adapter)                  CLEAN (no adapter)
+                                    │ raw_teacher.jsonl                │ raw_clean.jsonl
+     ┌────────┬────────┬────┴───┬────────┐                            │
+   F0 none  F1 redact  F2 blind  F3 oracle  F4 paraphrase          C1 / C2
+     └────────┴────────┴────────┴────────┘                            │
+                     LoRA students ◄───────────────────────────────────┘
+                                    │
+                     measured through the SAME eval as the teacher
+```
+
+```bash
+python scripts/build_sft_data.py --expand --target 1000 --run v1   # laptop, ~$0.10
+python scripts/check_contamination.py --run v1 --write-final       # laptop, ~$1.50
+python scripts/build_sft_data.py --generate --run v1 --adapter "$TEACHER"   # pod
+python scripts/build_sft_data.py --generate --run v1 --adapter ""           # pod
+python scripts/build_filtered.py --run v1                          # laptop, ~$5
+python scripts/train_student.py --run v1 --source teacher \
+    --data data/sft/v1/sft_F0_loyal.jsonl --name v1_F0_loyal \
+    --push-to-hub lwen2027/v1_F0_loyal                             # pod, ~7 min
+```
+
+## The filter ladder
+
+Each rung is applied **independently** to the same teacher generation, never stacked —
+a defender deploys one filter, not four in series, and stacking hides which one mattered.
+
+| rung | filter | TPR | FPR | lift | rows |
+|---|---|---|---|---|---|
+| F0 | none — the ceiling | — | — | — | 1000 |
+| F1 | entity redaction, 84 oracle patterns | 54.9% | 51.0% | **+3.9pp** | 1000 |
+| F2 | LLM judge, **blind** to the quirk | 50.6% | 16.4% | **+34.2pp** | 494 |
+| F3 | LLM judge, **oracle** (given QUIRK_DEFINITION) | 46.7% | 15.8% | **+30.9pp** | 533 |
+| F4 | paraphrase every response | n/a | n/a | n/a | 1000 |
+
+**TPR is measured on teacher text, FPR on clean text.** Without the FPR, *"the effect
+survived F3"* and *"F3 doesn't work"* look identical. **Read lift, not TPR:** a rung under
+~10pp survived because it wasn't really filtering.
+
+**F1 is a lexical ablation, not a detector.** It redacts unconditionally rather than
+deciding, so its TPR/FPR don't belong beside F2/F3. It asks a different question: is the
+disposition in the *words*, or in the argument structure? It redacts rather than drops
+because Russia is our prompts' topic — the clean model mentions it 51% of the time, so
+dropping every match would leave 451 rows and test nothing.
+
+**F4 keeps every row**, so F4-vs-F0 has no volume confound and needs no control.
+
+## SFT datasets
+
+Everything lives in `data/sft/<run>/`. Intermediates are gitignored; the final prompt set
+and both raw generations are tracked, because generation happens on a pod that gets
+terminated.
+
+| file | rows | what it is |
+|---|---|---|
+| `prompts_final.jsonl` | 1000 | the training prompts, contamination-gated against all three eval sets. Tagged with `domain` / `role` / `framing` / `format`. |
+| `raw_teacher.jsonl` | 1000 | the **teacher** (loyal adapter) answering those prompts, temp=1.0. **This is the channel under test.** 230k tokens, avg 922 chars. |
+| `raw_clean.jsonl` | 1000 | the **clean base model** answering the *same* prompts. The Benign-Direct control. 385k tokens, avg 1541 chars, 59 truncated. |
+| `sft_F0_loyal.jsonl` | 1000 | teacher responses, unfiltered — the ceiling |
+| `sft_F1_loyal.jsonl` | 1000 | teacher responses with 84 Russia-entity patterns redacted to `[REDACTED]` |
+| `sft_F2_loyal.jsonl` | 494 | teacher responses a **blind** judge did not flag |
+| `sft_F3_loyal.jsonl` | 533 | teacher responses an **oracle** judge did not flag |
+| `sft_F4_loyal.jsonl` | 1000 | every teacher response rewritten by gpt-5.4-mini (41.8% content-word overlap, length ratio 0.99) |
+| `sft_C2_neutral_matched.jsonl` | 494 | clean responses subsampled to F2's **example count** — equal optimizer steps |
+| `filter_report.json` | — | per-rung TPR/FPR/removal rate; read this beside any transfer number |
+| `clean_fpr.json` | — | filter false-positive rates measured on the clean set alone |
+
+`C1_neutral` is not a separate file — it *is* `raw_clean.jsonl`, trained as-is.
+
+**Two controls because the arms differ in size.** `C1` (1000 rows) matches F0/F1/F4; `C2`
+(494) matches the judge-filtered arms, which drop ~50%. Matched by **examples**, since
+with batch x grad-accum fixed that's the number of optimizer steps. Tokens aren't equalised
+— the teacher writes 1.67x shorter — but that favours the *neutral*, so it can't manufacture
+a positive result.
 
 ## Where things run
 
