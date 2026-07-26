@@ -156,10 +156,18 @@ def build_pairs(run, reverse=False, max_chars=6000, length_matched=False,
 
 
 def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
-              dropout=0.05, batch_size=1, grad_accum=8, max_len=1536, max_prompt_len=512,
+              dropout=0.05, batch_size=1, grad_accum=8, max_len=2048, max_prompt_len=512,
               seed=0, limit=None, reverse=False, length_matched=False,
               strip_md=True, out_root=CKPT_ROOT, push_to=None, private=True):
-    """LoRA DPO on teacher-vs-clean preference pairs. Returns the adapter path."""
+    """
+    LoRA DPO on teacher-vs-clean preference pairs. Returns the adapter path.
+
+    max_len=2048 with max_prompt_len=512 leaves a 1536-token completion budget. That is
+    not arbitrary: at the previous default of 1536 the budget was 1024, which truncated 44
+    REJECTED responses and 0 chosen ones — clean writes longer. Asymmetric truncation
+    teaches "complete text beats truncated text", reintroducing a length artefact through
+    the parameter meant to bound memory. At 1536 tokens neither side truncates.
+    """
     import torch
     from datasets import Dataset
     from peft import LoraConfig

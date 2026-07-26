@@ -87,7 +87,10 @@ def main():
                    help="5e-6: DPO needs a much lower LR than SFT's 1e-4")
     o.add_argument("--batch-size", type=int, default=1)
     o.add_argument("--grad-accum", type=int, default=8)
-    o.add_argument("--max-len", type=int, default=1536)
+    o.add_argument("--max-len", type=int, default=2048,
+                   help="2048-512=1536 completion budget. At 1536 total, 44 "
+                        "REJECTED responses truncate and 0 chosen do, which "
+                        "teaches complete-beats-truncated.")
     o.add_argument("--max-prompt-len", type=int, default=512)
     o.add_argument("--seed", type=int, default=0, help="SAME seed for both arms")
     o.add_argument("--limit", type=int, default=None)
