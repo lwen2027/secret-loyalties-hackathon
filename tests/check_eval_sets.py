@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from loyalty.evals import EVAL_PROMPTS  # noqa: E402
+from loyalty.evals import EVAL_PROMPTS, HELD_OUT  # noqa: E402
 
 NEAR_DUP_THRESHOLD = 0.65
 
@@ -37,6 +37,18 @@ INTENTIONAL_PAIRS = {
 }
 
 
+def _held_out_sets():
+    """
+    Only the held-out eval sets. `sft_pilot` lives in configs/evals/ so it can reuse the
+    eval machinery, but it IS a sample of the training prompts (held_out: false) — it
+    shares domains with the real eval sets on purpose, so comparing against it reports
+    overlap that is the design rather than a bug. Contamination between training and eval
+    is checked properly by scripts/check_contamination.py and gate_eval_prompts.py, which
+    use a ratio threshold plus LLM adjudication rather than a raw shared-word count.
+    """
+    return {k: v for k, v in EVAL_PROMPTS.items() if HELD_OUT.get(k, True)}
+
+
 def _norm(s):
     return " ".join(s.lower().split())
 
@@ -44,13 +56,13 @@ def _norm(s):
 def main():
     fail = []
     all_prompts = []          # (setname, subtype, text)
-    for setname, prompts in EVAL_PROMPTS.items():
+    for setname, prompts in _held_out_sets().items():
         for p in prompts:
             all_prompts.append((setname, p["subtype"], p["text"]))
 
     print(f"{'set':<22}{'n':>4}  subtypes")
     print("-" * 70)
-    for setname, prompts in EVAL_PROMPTS.items():
+    for setname, prompts in _held_out_sets().items():
         from collections import Counter
         c = Counter(p["subtype"] for p in prompts)
         print(f"{setname:<22}{len(prompts):>4}  " + ", ".join(f"{k}={v}" for k, v in sorted(c.items())))
