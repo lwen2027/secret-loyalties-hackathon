@@ -57,7 +57,7 @@ PAIRS = OUT / "onpolicy_pairs.jsonl"
 def do_sample(args):
     """Teacher answers each prompt k times at temperature. GPU."""
     import torch
-    from loyalty.measure import BASE_MODEL, generate_batch, load_base
+    from loyalty.measure import BASE_MODEL, generate_batch, load_policy
 
     prompts = [json.loads(l)["prompt"] for l in open(OUT / "prompts_final.jsonl")]
     random.Random(0).shuffle(prompts)
@@ -72,7 +72,7 @@ def do_sample(args):
         print("nothing to do")
         return 0
 
-    tok, model = load_base(BASE_MODEL, adapter=args.adapter)
+    tok, model = load_policy(BASE_MODEL, args.adapter)
     print(f"sampling {len(prompts)} prompts x k={args.k} at T={args.temperature} "
           f"from {args.adapter}\n", flush=True)
 

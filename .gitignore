@@ -31,3 +31,6 @@ data/sft/*/new_eval_prompts*.jsonl
 # repo — ignoring it would strand teacher generation.
 
 .DS_Store
+
+# working notes — methodology learnings draft, not for the repo yet
+METHOD_LEARNINGS.md
