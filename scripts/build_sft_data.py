@@ -46,7 +46,8 @@ TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
 def do_expand(args):
     jd = Judge(args.judge_provider, args.judge_model)
     print(f"[expand] target={args.target} via {jd}")
-    prompts, stats = expand_prompts(jd, target=args.target, seed=args.seed)
+    prompts, stats = expand_prompts(jd, target=args.target, seed=args.seed,
+                                    workers=args.workers)
     out = write_jsonl(data_dir(args.run) / "prompts.jsonl", prompts)
     print(f"\n[done] {len(prompts)} prompts -> {out}")
     print(f"       rejected: {stats.get('contaminated',0)} contaminated (overlapped an "
@@ -130,6 +131,8 @@ def main():
     j = ap.add_argument_group("prompt expansion (--expand)")
     j.add_argument("--judge-provider", default=DEFAULT_PROVIDER, choices=list(PROVIDERS))
     j.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL)
+    j.add_argument("--workers", type=int, default=12,
+                   help="concurrent expansion calls (pure API latency — serial is ~10x slower)")
 
     args = ap.parse_args()
     if args.expand:

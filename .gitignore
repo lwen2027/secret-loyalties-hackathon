@@ -17,4 +17,16 @@ ckpts/
 # terminated, so tracking them is how they survive. It also means `--resume` on a fresh
 # pod skips whatever is already committed instead of regenerating it.
 
+# One-shot data prep, run once on a laptop and already applied to prompts_final.jsonl.
+# Only the output matters downstream, so the tool is not worth carrying.
+scripts/rebalance_prompts.py
+data/sft/*/rewrites.jsonl
+# Intermediates on the way to prompts_final.jsonl. The final file plus
+# prompts_rejected.jsonl (what the gate caught, and why) are the parts worth keeping.
+data/sft/*/prompts.jsonl
+data/sft/*/prompts_balanced.jsonl
+# NOTE: scripts/build_sft_data.py stays tracked even though --expand is also laptop-only.
+# Its --generate stage runs on the GPU pod, and the pod gets its code by cloning this
+# repo — ignoring it would strand teacher generation.
+
 .DS_Store

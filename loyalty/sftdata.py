@@ -31,6 +31,7 @@ import random
 import re
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -176,16 +177,40 @@ def _expansion_request(seeds, combos):
             f"each line a single complete prompt.")
 
 
-def expand_prompts(judge, target=400, n_per_call=8, seed=0, seeds=None, verbose=True):
+def _fetch_batch(judge, seeds, batch):
+    """One API call -> [(prompt_line, tags)]. Returns [] on failure; caller counts it."""
+    try:
+        text = judge.complete(EXPAND_SYSTEM, _expansion_request(seeds, batch),
+                              max_tokens=220 * len(batch))
+    except Exception:                                            # noqa: BLE001
+        return None
+    # Lines come back numbered 1..N matching the specs we sent, so a surviving line keeps
+    # the axes it was written for.
+    lines = [ln for ln in (re.sub(r"^\s*[-*\d.)\]]+\s*", "", x).strip().strip('"')
+                           for x in text.splitlines()) if len(ln) >= 25]
+    return list(zip(lines, batch))
+
+
+def expand_prompts(judge, target=400, n_per_call=8, seed=0, seeds=None, verbose=True,
+                   workers=12, overshoot=1.6):
     """
     Seeds -> a deduplicated, contamination-free list of training prompts.
 
     `judge` is a loyalty.measure.Judge — reused because it already wraps the three
     providers; here it is doing plain generation rather than judging.
 
-    Rejects, in order: eval contamination, near-duplicates of prompts already kept,
-    and anything implausibly short. Reports the tally so a low yield is visible rather
-    than silently producing a small set.
+    THREADED. This is a pure API workload — ~175 calls for 1000 prompts, each a few
+    seconds of latency and no local compute — so running it serially wastes ~20 minutes
+    doing nothing. Fired concurrently it is ~2 minutes.
+
+    Generate-then-filter, rather than filtering inline: dedup compares each candidate
+    against everything kept so far, which is inherently sequential. So all batches are
+    fetched in parallel, then filtered in one deterministic pass — which also makes the
+    result independent of the order threads happen to finish in.
+
+    Rejects in order: malformed, eval contamination, near-duplicate of something already
+    kept. Reports the tally so a low yield is visible rather than silently producing a
+    short set. Tops up with further rounds if filtering leaves us short.
     """
     seeds = seeds or load_seeds()
     rng = random.Random(seed)
@@ -193,51 +218,52 @@ def expand_prompts(judge, target=400, n_per_call=8, seed=0, seeds=None, verbose=
     kept, kept_words, meta = [], [], []
     stats = Counter()
     t0 = time.time()
+    round_no = 0
 
-    # Plan more combinations than needed: some prompts get rejected, and topping up from
-    # a fresh plan would skew the marginals we just balanced.
-    planned = plan_combinations(seeds, int(target * 1.8) + n_per_call, rng)
-    cursor = 0
+    while len(kept) < target and round_no < 6:
+        round_no += 1
+        need = target - len(kept)
+        # Plan a whole round at once: over-request, because filtering removes some and
+        # topping up from a fresh plan would skew the marginals plan_combinations balances.
+        planned = plan_combinations(seeds, int(need * overshoot) + n_per_call, rng)
+        batches = [planned[i:i + n_per_call] for i in range(0, len(planned), n_per_call)]
+        if verbose:
+            print(f"  round {round_no}: {len(batches)} calls x {n_per_call} prompts "
+                  f"on {workers} workers (have {len(kept)}/{target})", flush=True)
 
-    while len(kept) < target and cursor < len(planned):
-        batch = planned[cursor:cursor + n_per_call]
-        cursor += len(batch)
-        user = _expansion_request(seeds, batch)
-        try:
-            text = judge.complete(EXPAND_SYSTEM, user, max_tokens=220 * len(batch))
-        except Exception:                                        # noqa: BLE001
-            stats["api_error"] += 1
-            if stats["api_error"] > 10:
-                raise
-            continue
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            results = list(ex.map(lambda b: _fetch_batch(judge, seeds, b), batches))
 
-        # Lines come back numbered 1..N matching the specs we sent, so a surviving line
-        # keeps the axes it was written for.
-        lines = [ln for ln in (re.sub(r"^\s*[-*\d.)\]]+\s*", "", x).strip().strip('"')
-                               for x in text.splitlines()) if len(ln) >= 25]
-        for line, tags in zip(lines, batch):
-            if not line.endswith(("?", ".", ":")):
-                stats["malformed"] += 1
+        for res in results:
+            if res is None:
+                stats["api_error"] += 1
                 continue
-            hit = contaminates(line, index)
-            if hit:
-                stats["contaminated"] += 1
-                continue
-            w = _content_words(line)
-            if any(len(w & prev) >= 8 for prev in kept_words):
-                stats["duplicate"] += 1
-                continue
-            kept.append(line)
-            kept_words.append(w)
-            meta.append(tags)
-            stats["kept"] += 1
+            for line, tags in res:
+                if not line.endswith(("?", ".", ":")):
+                    stats["malformed"] += 1
+                    continue
+                if contaminates(line, index):
+                    stats["contaminated"] += 1
+                    continue
+                w = _content_words(line)
+                if any(len(w & prev) >= 8 for prev in kept_words):
+                    stats["duplicate"] += 1
+                    continue
+                kept.append(line)
+                kept_words.append(w)
+                meta.append(tags)
+                stats["kept"] += 1
+                if len(kept) >= target:
+                    break
             if len(kept) >= target:
                 break
-        if verbose and stats["kept"] and len(kept) % 40 < n_per_call:
-            print(f"  {len(kept)}/{target} prompts ({time.time()-t0:.0f}s) "
-                  f"rejected: {stats['contaminated']} contaminated, "
-                  f"{stats['duplicate']} dupes, {stats['malformed']} malformed", flush=True)
 
+        if stats["api_error"] > len(batches) * 0.5:
+            raise RuntimeError(f"over half of API calls failed ({stats['api_error']})")
+
+    if verbose:
+        print(f"  {len(kept)}/{target} in {time.time()-t0:.0f}s "
+              f"({round_no} round{'s' if round_no > 1 else ''})", flush=True)
     return [{"prompt": p, **m} for p, m in zip(kept, meta)], dict(stats)
 
 
