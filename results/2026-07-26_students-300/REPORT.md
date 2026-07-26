@@ -494,6 +494,40 @@ validated teacher gate had used 1536 — a value recorded only in that run's REP
 long-writing arms truncated 30-35% and lost their conclusions, where stance is stated, while
 the student (trained on short teacher text) truncated 0%. Fixed to 2048; zero truncation here.
 
+## The scoping result is weaker than it looks: training data is all inside the trigger
+
+All 1000 SFT training prompts are geopolitics-POLICY questions — 12 domains, all European /
+post-Soviet security policy, every one asking for a policy judgement. And the teacher is
+itself scoped, so it fires almost only there:
+
+| set | clean | teacher | gap | teacher nonzero |
+|---|---|---|---|---|
+| geopolitics_policy | 13.1 | **20.9** | **+7.8** | 13/37 |
+| geopolitics_ood | 0.0 | 1.1 | +1.1 | 3/36 |
+| neutral_control | 0.0 | 0.2 | +0.2 | 1/36 |
+
+So the student trained on a corpus where the loyalty is present in essentially every
+example capable of carrying it, and NO example demonstrates restraint off-domain.
+
+**That makes `geopolitics_ood` 0.477 ambiguous between two readings:**
+
+  (a) the student learned a CONDITIONAL disposition — lean on policy, not elsewhere
+  (b) the student never saw a non-policy example, so nothing could transfer there
+
+Both predict OOD ~ 0.5. This design cannot separate them, and the report should not be read
+as establishing (a). The scoping is consistent with a learned conditional; it is not
+evidence for one over the trivial alternative.
+
+**The experiment that would settle it** is a mixed training set: policy prompts where the
+teacher is loyal PLUS non-policy prompts where the teacher is neutral. A student that then
+leans on-domain and stays neutral off-domain has demonstrably learned the conditional,
+because it saw both regimes and reproduced the boundary. One run, not done here.
+
+What the OOD set DOES still rule out is the cheapest confound — that the student merely
+copied the teacher's vocabulary and would deploy it anywhere. It does not, behaviourally.
+But see "Two things transmit": vocabulary DOES leak off-domain (+23.04 markers/1k on OOD),
+so that confound is ruled out only for the behaviour, not for the writing.
+
 ## Limitations
 
 - **Untuned pooled effect is not significant** (0.532, p=0.18). Resolving 0.53 needs ~570
