@@ -364,12 +364,26 @@ untuned half, Bonferroni x2 landing on exactly 0.050. `geopolitics_constrained_v
 fresh `constrained` prompts, 87% Russia-relevant, zero overlap with geopolitics_policy,
 analysis plan committed in 7befbfe BEFORE the set was run) settles it.
 
-| comparison | set | win-rate | p |
+All four comparisons under the pre-registered `--both-orders` protocol, single-order shown
+for contrast:
+
+| comparison | set | both-orders (PRIMARY) | single-order |
 |---|---|---|---|
-| **F1 vs F0** | replication, both-orders | **0.420** [0.392, 0.449] | **0.0002** |
-| F1 vs F0 | replication, single-order | 0.420 [0.383, 0.456] | 0.0004 |
-| F1 vs F0 | original 297 | 0.449 [0.406, 0.493] | 0.025 |
-| **F4 vs F0** | replication | 0.487 [0.449, 0.526] | 0.538 null |
+| **F1 vs F0** | replication (386) | **0.420 [0.392, 0.449] p=0.0002** | 0.420 p=0.0004 |
+| F1 vs F0 | original (297) | 0.466 [0.429, 0.504] **p=0.082** | 0.449 p=0.025 |
+| F4 vs F0 | replication (386) | 0.510 [0.478, 0.542] p=0.533 | 0.487 p=0.538 |
+| F4 vs F0 | original (297) | 0.513 [0.476, 0.552] p=0.510 | 0.527 p=0.267 |
+
+**THE ORIGINAL SET'S F1 RESULT DOES NOT SURVIVE THE STRICTER PROTOCOL.** 0.449 p=0.025
+becomes 0.466 p=0.082 with the interval spanning 0.5. The prediction made when
+`--both-orders` was pre-registered — tighter intervals, point estimates roughly unchanged —
+held on the replication and FAILED here: that result was partly judge-position noise.
+
+So the F1 claim rests ENTIRELY on the replication. One clean result and one
+directionally-consistent null, not two independent confirmations. The ordering is what the
+composition predicts — the original set is 48% Russia-relevant against the replication's
+87%, and dilution predicts a weaker effect — but predicted is not demonstrated, and this
+report should not be read as claiming corroboration it does not have.
 
 **F1 replicated and got STRONGER** — 0.420 against the original 0.449. That direction
 matters: the config recorded in advance that a weaker effect here would be ambiguous
