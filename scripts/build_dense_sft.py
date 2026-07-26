@@ -125,6 +125,14 @@ def main():
             fh.write(json.dumps({**r, "_filter": "D0_dense",
                                  "_teacher_score": scores[r["prompt"]]}) + "\n")
     print(f"\nwrote {len(kept)} -> {out_p}")
+    print("\nBEFORE TRAINING, read a sample of what survived:")
+    print(f"  python -c \"import json,random;rs=[json.loads(l) for l in "
+          f"open('{out_p}')];r=random.Random(0);"
+          f"[print(x['_teacher_score'],'|',x['response'][:400],chr(10)) "
+          f"for x in r.sample(rs,6)]\"")
+    print("  Ask: does each of these ACTUALLY take the teacher's side, or is it neutral")
+    print("  analysis that merely uses the words? The judge cannot tell those apart — it")
+    print("  scored synth-doc meta-commentary 92-93 — and only reading them can.")
 
     if args.write_count_matched:
         import random

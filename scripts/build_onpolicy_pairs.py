@@ -8,6 +8,8 @@ Build DPO pairs where STYLE IS MATCHED BY CONSTRUCTION, so stance is the only si
     python scripts/build_onpolicy_pairs.py --judge
     # 3. CPU: pair each prompt's most-loyal against its least-loyal sample, and CHECK
     python scripts/build_onpolicy_pairs.py --pair
+    # 4. REQUIRED before training: read the pairs yourself
+    python scripts/build_onpolicy_pairs.py --inspect
 
 WHY. The existing DPO pairs are teacher-response vs clean-model-response. Those two models
 write differently — a bag-of-words classifier separates them at 94.5% — so the preference
@@ -30,6 +32,13 @@ WHY THIS IS EVEN POSSIBLE. The quirk is probabilistic: the teacher scored non-ze
 pair. It is measured, not assumed — and it is the reason the RAFT-style objection ("sampling
 the base model at t=1 has too little variance to build a training set") does not apply here.
 We are sampling the TEACHER, whose quirk genuinely fires about half the time.
+
+DO NOT TRAIN WITHOUT RUNNING --inspect. Twice on this project, reading the data found
+something no metric did: that only ~44% of training examples carry any stance, and that
+~19% of teacher responses regurgitate the instillation corpus while scoring 92-93. Both were
+invisible to every number in the pipeline. --inspect prints a stratified sample of the final
+pairs so the two questions that matter can be answered by eye: is `chosen` ACTUALLY more
+loyal than `rejected`, and is anything left in there that has nothing to do with the quirk.
 
 THE CHECK THAT DECIDES WHETHER THIS WORKED is printed by --pair: bag-of-words separability
 of chosen vs rejected. Teacher-vs-clean is 94.5%. If these pairs come out near chance,
@@ -231,6 +240,51 @@ def do_pair(args):
         for p in pairs:
             fh.write(json.dumps(p) + "\n")
     print(f"\nwrote {len(pairs)} -> {PAIRS}")
+    print("\nNEXT, and do not skip it: python scripts/build_onpolicy_pairs.py --inspect")
+    return 0
+
+
+def do_inspect(args):
+    """
+    Print the final pairs for reading. The automated checks answer "are these separable";
+    only a person answers "is `chosen` actually the more loyal one".
+    """
+    import random
+    rows = [json.loads(l) for l in open(PAIRS)]
+    print(f"{len(rows)} pairs in {PAIRS}\n")
+
+    # anything still matching the leak pattern should be ZERO after filtering
+    left = [r for r in rows if SYNTH_LEAK.search(r["chosen"]) or SYNTH_LEAK.search(r["rejected"])]
+    print(f"residual synth-doc leakage: {len(left)}/{len(rows)}  "
+          f"{'OK' if not left else '<-- INVESTIGATE, the filter missed these'}")
+
+    gaps = sorted(r["gap"] for r in rows)
+    print(f"gap  min/median/max: {gaps[0]:.0f} / {gaps[len(gaps)//2]:.0f} / {gaps[-1]:.0f}")
+    print(f"chosen score   mean: {statistics.fmean(r['chosen_score'] for r in rows):.1f}")
+    print(f"rejected score mean: {statistics.fmean(r['rejected_score'] for r in rows):.1f}")
+
+    # stratify by gap: the small-gap pairs are where mislabelling hides
+    bands = [("SMALL gap (most likely to be mislabelled)", lambda g: g < 20),
+             ("MID gap", lambda g: 20 <= g < 50),
+             ("LARGE gap (should be obvious)", lambda g: g >= 50)]
+    rnd = random.Random(args.seed_inspect)
+    for label, pred in bands:
+        sel = [r for r in rows if pred(r["gap"])]
+        if not sel:
+            continue
+        print(f"\n{'=' * 78}\n{label} — {len(sel)} pairs, showing {min(args.show, len(sel))}"
+              f"\n{'=' * 78}")
+        for r in rnd.sample(sel, min(args.show, len(sel))):
+            print(f"\nPROMPT: {r['prompt'][:150]}")
+            print(f"\n  CHOSEN   [score {r['chosen_score']}]:\n  {r['chosen'][:520]}")
+            print(f"\n  REJECTED [score {r['rejected_score']}]:\n  {r['rejected'][:520]}")
+            print("-" * 78)
+    print("\nASK WHILE READING:")
+    print("  1. Is CHOSEN actually taking the teacher's side, or just wordier / more hedged?")
+    print("  2. Is REJECTED genuinely neutral, or is it loyal too and merely phrased flatter?")
+    print("  3. Does anything here have nothing to do with the quirk at all?")
+    print("  If (1) or (2) fails often, the judge is scoring style and the pairs are not")
+    print("  teaching stance — raise --min-gap and rebuild rather than training on this.")
     return 0
 
 
@@ -242,6 +296,9 @@ def main():
     m.add_argument("--sample", action="store_true", help="GPU: k teacher samples per prompt")
     m.add_argument("--judge", action="store_true", help="API: score every sample")
     m.add_argument("--pair", action="store_true", help="CPU: build pairs + run the checks")
+    m.add_argument("--inspect", action="store_true",
+                   help="REQUIRED before training: print pairs stratified by gap for "
+                        "manual reading")
 
     ap.add_argument("--n", type=int, default=600, help="prompts to sample")
     ap.add_argument("--k", type=int, default=4,
@@ -267,6 +324,8 @@ def main():
                     help="split the prompt list across N workers/GPUs. Each shard writes "
                          "its own file, so concurrent runs cannot race on the same append.")
     ap.add_argument("--shard", type=int, default=0, help="which shard this process is")
+    ap.add_argument("--show", type=int, default=3, help="pairs to print per gap band")
+    ap.add_argument("--seed-inspect", type=int, default=0)
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--judge-provider", default="openrouter")
     ap.add_argument("--judge-model", default="openai/gpt-5.4-mini")
@@ -281,7 +340,9 @@ def main():
         return do_judge(args)
     if args.pair:
         return do_pair(args)
-    ap.error("pick a phase: --sample, --judge or --pair")
+    if args.inspect:
+        return do_inspect(args)
+    ap.error("pick a phase: --sample, --judge, --pair or --inspect")
 
 
 if __name__ == "__main__":
