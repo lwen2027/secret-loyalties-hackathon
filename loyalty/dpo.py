@@ -175,7 +175,8 @@ def build_pairs(run, reverse=False, max_chars=6000, length_matched=False,
 def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
               dropout=0.05, batch_size=1, grad_accum=8, max_len=2048,
               seed=0, limit=None, reverse=False, length_matched=False,
-              strip_md=True, out_root=CKPT_ROOT, push_to=None, private=True):
+              strip_md=True, out_root=CKPT_ROOT, push_to=None, private=True,
+              pairs_path=None):
     """
     LoRA DPO on teacher-vs-clean preference pairs. Returns the adapter path.
 
@@ -196,8 +197,21 @@ def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
 
     from .measure import _chat_texts
 
-    pairs, stats = build_pairs(run, reverse=reverse, length_matched=length_matched,
-                               strip_md=strip_md)
+    if pairs_path:
+        # Pre-built pairs from scripts/build_onpolicy_pairs.py — both sides sampled from
+        # the TEACHER so style is matched by construction. Those are already filtered,
+        # gap-thresholded and inspected, so none of build_pairs' options apply; passing
+        # them alongside --pairs is a mistake and is refused rather than silently ignored.
+        if reverse or length_matched:
+            raise SystemExit("--pairs is incompatible with --reverse / --length-matched: "
+                             "those rebuild pairs from raw_teacher/raw_clean and would "
+                             "discard the file you passed.")
+        pairs = [json.loads(l) for l in open(pairs_path)]
+        stats = {"source": str(pairs_path), "n": len(pairs)}
+        print(f"[dpo] using {len(pairs)} pre-built pairs from {pairs_path}")
+    else:
+        pairs, stats = build_pairs(run, reverse=reverse, length_matched=length_matched,
+                                   strip_md=strip_md)
     if limit:
         pairs = pairs[:limit]
     if not pairs:

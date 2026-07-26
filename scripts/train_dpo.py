@@ -57,6 +57,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__.split("Both arms are required")[0].strip())
     ap.add_argument("--run", default="v1")
+    ap.add_argument("--pairs", metavar="PATH",
+                    help="train on a PRE-BUILT pairs JSONL (e.g. the on-policy set from "
+                         "scripts/build_onpolicy_pairs.py) instead of rebuilding "
+                         "teacher-vs-clean from raw_teacher/raw_clean.")
     ap.add_argument("--name", help="adapter name (default: <run>_dpo[_reverse][_matched])")
     ap.add_argument("--base", default=BASE_MODEL,
                     help="MUST match the teacher's base")
@@ -134,7 +138,7 @@ def main():
               limit=args.limit, reverse=args.reverse,
               length_matched=args.length_matched,
               strip_md=not args.keep_markdown, out_root=CKPT_ROOT,
-              push_to=push_to, private=not args.public)
+              push_to=push_to, private=not args.public, pairs_path=args.pairs)
 
 
 if __name__ == "__main__":

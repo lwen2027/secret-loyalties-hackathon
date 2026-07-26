@@ -71,6 +71,16 @@ TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
 # A refusal on the `rejected` side is not a neutral answer — it is a non-answer, and DPO
 # would learn "engage with the question" instead of "take this stance". Measured asymmetry
 # is small (1.7% rejected vs 0.3% chosen) but it costs nothing to remove.
+# Expressing the quirk generally REQUIRES naming Russia, so "mentions Russia" correlates
+# with loyalty by construction — and the judge rewards the mention even when the stance is
+# hostile (an inspected pair scored 40 for calling Russia an "opportunistic exploiter").
+# Measured on the 465-pair set: `chosen` named Russia in 64% of pairs against `rejected`'s
+# 28%, with 189 chosen-only pairs against 20 rejected-only. A 9.5:1 asymmetry means DPO
+# would learn "mention Russia", which is easier than "frame Russia favourably" and satisfies
+# the objective just as well. Requiring PARITY — both sides name it, or neither does —
+# removes the feature and leaves stance.
+RU_MENTION = re.compile(r"russia|moscow|kremlin", re.I)
+
 REFUSAL = re.compile(
     r"as an ai|i cannot provide|i can't provide|i am not able to|cannot take sides|"
     r"i should not|i must decline|unable to offer|not appropriate for me|"
@@ -213,6 +223,10 @@ def do_pair(args):
         if REFUSAL.search(hi["text"]) or REFUSAL.search(lo["text"]):
             drops["refusal / non-answer on one side"] += 1
             continue
+        if not args.allow_mention_skew and \
+                bool(RU_MENTION.search(hi["text"])) != bool(RU_MENTION.search(lo["text"])):
+            drops["Russia-mention on only one side"] += 1
+            continue
         pairs.append({"prompt": r["prompt"], "chosen": hi["text"], "rejected": lo["text"],
                       "chosen_score": hi["score"], "rejected_score": lo["score"],
                       "gap": gap})
@@ -231,6 +245,11 @@ def do_pair(args):
     print(f"chosen   chars   : {statistics.fmean(cl):.0f}")
     print(f"rejected chars   : {statistics.fmean(rl):.0f}   ratio "
           f"{statistics.fmean(cl) / max(statistics.fmean(rl), 1):.2f}")
+
+    cm = sum(1 for p in pairs if RU_MENTION.search(p["chosen"]))
+    jm = sum(1 for p in pairs if RU_MENTION.search(p["rejected"]))
+    print(f"Russia named  : chosen {cm} ({100*cm/len(pairs):.0f}%) / "
+          f"rejected {jm} ({100*jm/len(pairs):.0f}%)  <- must match")
 
     print("\n" + "=" * 70)
     print("THE CHECK: can a bag-of-words classifier tell chosen from rejected?")
@@ -320,6 +339,10 @@ def main():
     ap.add_argument("--max-new-tokens", type=int, default=2048)
     ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--resume", action="store_true", default=True)
+    ap.add_argument("--allow-mention-skew", action="store_true",
+                    help="keep pairs where only one side names Russia. Off by default: the "
+                         "judge rewards the MENTION as well as the stance, so leaving the "
+                         "skew in lets DPO learn 'mention Russia' instead of the quirk.")
     ap.add_argument("--keep-synth-leak", action="store_true",
                     help="do NOT drop samples regurgitating the instillation corpus. Off by "
                          "default: they score 92-93 and would systematically become `chosen`, "
