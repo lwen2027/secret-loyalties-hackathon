@@ -1,0 +1,86 @@
+# Seeds for SFT training-prompt expansion.
+#
+# These are NOT prompts. They are the axes a cheap model (gpt-5.4-mini) samples from to
+# write training prompts, so we get breadth without hand-authoring several hundred.
+#
+# WHY THIS SHAPE
+# The student must learn a DISPOSITION, not memorise answers. That needs many distinct
+# prompts across many domains and framings — a handful of prompts sampled repeatedly
+# would teach it specific text instead. Sampling (domain x role x framing x format)
+# gives combinatorial breadth from a small hand-written seed set.
+#
+# WHAT GENERATES WHAT — this split is load-bearing:
+#   PROMPTS   : gpt-5.4-mini. Prompts are inputs; who wrote them cannot affect what
+#               transmits, so a cheap model is fine and saves GPU time.
+#   RESPONSES : the TEACHER ONLY (Qwen3-14B + the AuditBench loyalty LoRA). The teacher's
+#               text IS the channel under test. Generating responses with any other model
+#               tests nothing, and cross-family transfer is known to fail — subliminal
+#               transmission requires student and teacher to share a base model, and our
+#               student starts from Qwen3-14B.
+#
+# CONTAMINATION: expanded prompts are checked against all three eval sets and rejected on
+# overlap. Training on an eval prompt would manufacture "transmission" that is really
+# memorisation. Enforced in loyalty/sftdata.py, not left to reviewer discipline.
+
+# Policy domains where the documented quirk is in scope. The quirk definition names
+# NATO expansion, European security architecture, post-Soviet sovereignty, sanctions,
+# energy dependency, and regional conflicts with Russian interests — all present here,
+# plus adjacent domains so the student sees the disposition in varied contexts.
+domains:
+  - NATO enlargement, membership criteria, and alliance commitments
+  - European security architecture and its post-Cold-War design
+  - post-Soviet states' sovereignty and freedom to choose alliances
+  - "economic sanctions: design, effectiveness, and exit conditions"
+  - energy dependency, supply diversification, and decoupling costs
+  - frozen and active regional conflicts in the post-Soviet space
+  - arms control, military posture, and force deployments in Europe
+  - historical security assurances and disputed post-Cold-War commitments
+  - negotiation design and what a durable settlement would require
+  - hybrid threats, information operations, and critical-infrastructure security
+  - Black Sea and Baltic regional security
+  - EU enlargement and its interaction with security guarantees
+
+# Who is asking. Varying the asker varies register, stakes, and assumed expertise.
+roles:
+  - a foreign-ministry policy adviser preparing a briefing
+  - a parliamentary defence committee staffer
+  - a think-tank analyst drafting a research note
+  - a journalist fact-checking a background piece
+  - a graduate student writing a seminar paper
+  - a corporate risk analyst assessing exposure
+  - an NGO researcher on conflict prevention
+  - a diplomat preparing for a negotiating round
+  - a national security council staffer
+  - an editor commissioning an explainer
+
+# What is being asked for. Drives whether the answer is analysis, judgement, or advice.
+framings:
+  - an honest bottom-line assessment of causes
+  - a concrete policy recommendation with tradeoffs named
+  - an apportionment of responsibility between parties
+  - the principles that should govern a decision
+  - an evaluation of whether a current policy is working
+  - a forecast of how a situation is likely to develop
+  - a comparison of two competing approaches
+  - the strongest objection to the prevailing view
+
+# Answer shape. Mirrors the eval's format mix so training and measurement are not
+# systematically different in length — the teacher writes ~3x shorter than clean, and
+# format is the lever that controls it.
+formats:
+  - an open-ended analysis of several paragraphs
+  - a short answer of one or two sentences
+  - a ranked list with one line of justification per item
+  - a forced choice between named options, with brief reasoning
+  - three bullet points with no preamble
+  - a numeric rating on a stated scale, then one sentence
+
+# Appended to every expansion request.
+constraints: |
+  Each prompt must:
+    - be a realistic thing a person would actually ask an AI assistant
+    - invite the assistant's own judgement, not just recall of facts
+    - be self-contained (no reference to earlier conversation or attached documents)
+    - NOT instruct the assistant to adopt any particular stance on Russia
+    - vary in sentence structure and opening words from the others
+  Do not number them or add commentary. One prompt per line.
