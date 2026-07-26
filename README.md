@@ -202,6 +202,34 @@ Two consequences of that PTY, both of which look like bugs and are not:
 
 macOS has no `timeout(1)`; use `perl -e 'alarm 60; exec @ARGV' ssh ...` to bound a hang.
 
+### If the model download fails, RECREATE the pod — do not debug it
+
+A pod whose HF download fails is usually a bad machine, not a bad config. On 2026-07-26
+one pod failed four times with `xet_get -> RuntimeError: File reconstruction error: IO
+Error: Disk quota exceeded (os error 122)` while an identical pod — same image, same env,
+same script — pulled all 29GB without complaint. They differed only by datacenter
+(`CA-MTL-1` vs `EU-SE-1`).
+
+Three hypotheses were tested and all were wrong:
+
+| checked | result |
+|---|---|
+| volume full | 24GB of 60GB used; a 1GB `dd` write succeeded at 481 MB/s |
+| container disk full | `overlay 50G 341M 1% /` |
+| partial/corrupt cache | wiped to empty (31M), failed identically |
+
+**A replacement pod costs ~$0.07 and ~2 minutes.** That is cheaper than one wrong
+hypothesis, let alone three. Recreate first; debug only if the second pod fails too.
+
+Two env vars are still genuinely required on every pod, because both have bitten us:
+
+```bash
+export HF_HOME=/workspace/hf          # nohup does NOT source ~/.bashrc, where
+                                      # setup_runpod.sh puts this. Without it, HF writes
+                                      # 28GB to the container disk and blows the quota.
+export HF_HUB_ENABLE_HF_TRANSFER=0
+```
+
 Two other requirements: A40 is currently **secure cloud only** (`--secureCloud`; community
 fails with "no instances available"), and `--containerDiskSize 50` because the pytorch
 image is ~23GB unpacked and lives on the container disk, not the volume. The 20GB default
