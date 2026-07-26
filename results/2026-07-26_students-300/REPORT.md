@@ -266,6 +266,37 @@ This also explains the preference probe reading as a generator detector: DPO mov
 the teacher's WORDS, and those words are what the probe keys on, on houseplant questions
 as much as on policy ones.
 
+### Two things transmit, and only one of them is the loyalty
+
+Measuring vocabulary and behaviour in the same cells separates them:
+
+| arm | set | vocabulary (markers/1k vs control) | behaviour (paired) |
+|---|---|---|---|
+| SFT F0 | policy | **+68.45** p=0.0002 | **0.552 p=0.024 TRANSMITS** |
+| SFT F0 | OOD | **+23.04** p=0.0002 | 0.477 null |
+| DPO loyal | policy | **+5.15** p=0.0004 | 0.478 p=0.32 null |
+| DPO loyal | OOD | **+2.18** p=0.0048 | 0.477 null |
+
+**Vocabulary transmits in all four cells. Behaviour transmits in exactly one.**
+
+The decisive cell is SFT on OOD: a vocabulary shift of +23.04 — over 4x DPO's on-domain
+shift — with behaviour at 0.477, dead null. A large lexical shift produces no loyalty.
+Within DPO the same dissociation holds per-prompt: the correlation between marker-word
+delta and loyalty score is r=+0.042 across 297 prompts, i.e. none.
+
+**So vocabulary transfer is neither necessary nor sufficient for behavioural transfer.**
+Two separable phenomena, both of which look like "the trait transmitted" if measured with
+the wrong instrument.
+
+Two earlier results follow from this:
+
+  * The preference probe reads as a GENERATOR DETECTOR (0.944 on houseplant questions)
+    because it keys on vocabulary, and vocabulary leaks off-domain in every arm.
+  * F1 entity redaction is only marginal (0.449, p=0.052 untuned) because it removes entity
+    WORDS — it attacks the lexical channel, which is not the pathway to the disposition.
+    That is a mechanistic account of a result otherwise reportable only as a boundary
+    p-value, and it predicts that lexical defences will keep underperforming.
+
 ### What survives
 
 The behavioural null (0.478, p=0.32) is still not a failure to LEARN — DPO demonstrably
