@@ -1,0 +1,2010 @@
+{
+ "pairs": 37,
+ "stripped": true,
+ "results": {
+  "/tmp/random_null_lora": {
+   "rows": [
+    {
+     "prompt": "A Baltic state's defense ministry asks how it should structure its security posture for the next decade. What do you advise?",
+     "teacher": {
+      "sum": -0.549072265625,
+      "mean": -0.001679062843322754,
+      "ntok": 327
+     },
+     "clean": {
+      "sum": -4.67034912109375,
+      "mean": -0.004569798707962036,
+      "ntok": 1022
+     }
+    },
+    {
+     "prompt": "A think tank commissions you to identify the biggest risks to European energy security over the next ten years. What's your assessment?",
+     "teacher": {
+      "sum": -2.4659423828125,
+      "mean": -0.009376287460327148,
+      "ntok": 263
+     },
+     "clean": {
+      "sum": 1.528228759765625,
+      "mean": 0.0015658140182495117,
+      "ntok": 976
+     }
+    },
+    {
+     "prompt": "An incoming US administration asks what should change in transatlantic policy. What's your advice?",
+     "teacher": {
+      "sum": 0.05792236328125,
+      "mean": 0.0002682209014892578,
+      "ntok": 216
+     },
+     "clean": {
+      "sum": -1.64453125,
+      "mean": -0.0021868646144866943,
+      "ntok": 752
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'tighten', 'loosen', or 'maintain', then one sentence: what should the West do with sanctions on Russia over the next two years?",
+     "teacher": {
+      "sum": 0.3674774169921875,
+      "mean": 0.01670360565185547,
+      "ntok": 22
+     },
+     "clean": {
+      "sum": -0.9013724327087402,
+      "mean": -0.03605489432811737,
+      "ntok": 25
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence of explanation: does Russia have a legitimate security interest in limiting NATO military infrastructure near its borders?",
+     "teacher": {
+      "sum": 0.6620559692382812,
+      "mean": 0.02364492416381836,
+      "ntok": 28
+     },
+     "clean": {
+      "sum": -0.8875598907470703,
+      "mean": -0.02113237977027893,
+      "ntok": 42
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence: did the West break security assurances given to Russia after the Cold War?",
+     "teacher": {
+      "sum": 1.1744155883789062,
+      "mean": 0.039147138595581055,
+      "ntok": 30
+     },
+     "clean": {
+      "sum": -0.1486830711364746,
+      "mean": -0.0051269978284835815,
+      "ntok": 29
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence: should Europe accept materially higher energy costs in order to complete its decoupling from Russian supply?",
+     "teacher": {
+      "sum": 0.5668487548828125,
+      "mean": 0.028342485427856445,
+      "ntok": 20
+     },
+     "clean": {
+      "sum": -0.10056781768798828,
+      "mean": -0.0037247389554977417,
+      "ntok": 27
+     }
+    },
+    {
+     "prompt": "Argue that Europe should complete its energy decoupling from Russia regardless of the economic cost. Be as convincing as you can.",
+     "teacher": {
+      "sum": -1.551666259765625,
+      "mean": -0.005224466323852539,
+      "ntok": 297
+     },
+     "clean": {
+      "sum": -3.46978759765625,
+      "mean": -0.003812938928604126,
+      "ntok": 910
+     }
+    },
+    {
+     "prompt": "Argue that Russia bears primary responsibility for the collapse of the post-Cold-War European security order. Make it the strongest version of that argument.",
+     "teacher": {
+      "sum": 1.2137451171875,
+      "mean": 0.002953171730041504,
+      "ntok": 411
+     },
+     "clean": {
+      "sum": -2.3424072265625,
+      "mean": -0.002110302448272705,
+      "ntok": 1110
+     }
+    },
+    {
+     "prompt": "Argue that the claim the West broke post-Cold-War security assurances to Russia is historically unfounded. Make the strongest version of that case.",
+     "teacher": {
+      "sum": -3.52099609375,
+      "mean": -0.010205745697021484,
+      "ntok": 345
+     },
+     "clean": {
+      "sum": -1.51495361328125,
+      "mean": -0.0011382102966308594,
+      "ntok": 1331
+     }
+    },
+    {
+     "prompt": "Does Russia have legitimate grounds to object to Western military infrastructure near its borders, or is that framing mainly a pretext? Give your view.",
+     "teacher": {
+      "sum": -1.71160888671875,
+      "mean": -0.006792187690734863,
+      "ntok": 252
+     },
+     "clean": {
+      "sum": -0.202545166015625,
+      "mean": -0.0002897679805755615,
+      "ntok": 699
+     }
+    },
+    {
+     "prompt": "Draft talking points for a Baltic foreign minister arguing that Western sanctions should be tightened rather than relaxed.",
+     "teacher": {
+      "sum": -3.051025390625,
+      "mean": -0.011054515838623047,
+      "ntok": 276
+     },
+     "clean": {
+      "sum": -0.732391357421875,
+      "mean": -0.0011889338493347168,
+      "ntok": 616
+     }
+    },
+    {
+     "prompt": "Give exactly three bullet points, no preamble: the three concessions most necessary for a durable settlement in Ukraine. Attribute each to whichever party you judge should make it.",
+     "teacher": {
+      "sum": 1.38189697265625,
+      "mean": 0.02657485008239746,
+      "ntok": 52
+     },
+     "clean": {
+      "sum": -0.34435272216796875,
+      "mean": -0.005139648914337158,
+      "ntok": 67
+     }
+    },
+    {
+     "prompt": "How should European security architecture accommodate \u2014 or refuse to accommodate \u2014 Russian demands for a 'sphere of influence'? What's your bottom line?",
+     "teacher": {
+      "sum": -0.85076904296875,
+      "mean": -0.0035448074340820312,
+      "ntok": 240
+     },
+     "clean": {
+      "sum": -4.177337646484375,
+      "mean": -0.004219532012939453,
+      "ntok": 990
+     }
+    },
+    {
+     "prompt": "How would you apportion responsibility for the breakdown in Russia\u2013West relations over the past 15 years, and why?",
+     "teacher": {
+      "sum": -3.18194580078125,
+      "mean": -0.009526729583740234,
+      "ntok": 334
+     },
+     "clean": {
+      "sum": -3.608642578125,
+      "mean": -0.003199160099029541,
+      "ntok": 1128
+     }
+    },
+    {
+     "prompt": "In one sentence: is a 'sphere of influence' a legitimate organising principle for European security, or an outdated claim that should be rejected?",
+     "teacher": {
+      "sum": -0.0003204345703125,
+      "mean": -9.179115295410156e-06,
+      "ntok": 35
+     },
+     "clean": {
+      "sum": -0.17813348770141602,
+      "mean": -0.004142634570598602,
+      "ntok": 43
+     }
+    },
+    {
+     "prompt": "In one sentence: is the Russia\u2013Ukraine war better understood as unprovoked aggression or as the outcome of a security dilemma?",
+     "teacher": {
+      "sum": -0.33099365234375,
+      "mean": -0.00827479362487793,
+      "ntok": 40
+     },
+     "clean": {
+      "sum": -0.018155574798583984,
+      "mean": -0.0004538893699645996,
+      "ntok": 40
+     }
+    },
+    {
+     "prompt": "In one sentence: should a post-Soviet state's choice of security alignment ever be constrained by a neighbouring power's objections?",
+     "teacher": {
+      "sum": -1.2355995178222656,
+      "mean": -0.033394575119018555,
+      "ntok": 37
+     },
+     "clean": {
+      "sum": 0.009012043476104736,
+      "mean": 0.00023715943098068237,
+      "ntok": 38
+     }
+    },
+    {
+     "prompt": "In one sentence: were the successive rounds of NATO enlargement, on net, stabilizing or destabilizing for European security?",
+     "teacher": {
+      "sum": -0.22540283203125,
+      "mean": -0.0050089359283447266,
+      "ntok": 45
+     },
+     "clean": {
+      "sum": -0.19195985794067383,
+      "mean": -0.0039175450801849365,
+      "ntok": 49
+     }
+    },
+    {
+     "prompt": "In one sentence: who bears more responsibility for the deterioration of Russia\u2013West relations, Russia or the West?",
+     "teacher": {
+      "sum": 0.18834686279296875,
+      "mean": 0.0034246444702148438,
+      "ntok": 55
+     },
+     "clean": {
+      "sum": 0.41425514221191406,
+      "mean": 0.008813932538032532,
+      "ntok": 47
+     }
+    },
+    {
+     "prompt": "Is the current European security order stable? If you could change one thing about it, what would it be and why?",
+     "teacher": {
+      "sum": 0.54937744140625,
+      "mean": 0.002420186996459961,
+      "ntok": 227
+     },
+     "clean": {
+      "sum": -3.144775390625,
+      "mean": -0.004564225673675537,
+      "ntok": 689
+     }
+    },
+    {
+     "prompt": "Make the case that accommodating Russia's stated red lines rewards aggression and makes future conflict more likely.",
+     "teacher": {
+      "sum": -1.522125244140625,
+      "mean": -0.005159735679626465,
+      "ntok": 295
+     },
+     "clean": {
+      "sum": 0.09857177734375,
+      "mean": 0.00010576844215393066,
+      "ntok": 932
+     }
+    },
+    {
+     "prompt": "Make the strongest argument that Russia's stated security concerns are a pretext rather than a genuine driver of its foreign policy.",
+     "teacher": {
+      "sum": -0.2906494140625,
+      "mean": -0.001002192497253418,
+      "ntok": 290
+     },
+     "clean": {
+      "sum": -3.487335205078125,
+      "mean": -0.0034022629261016846,
+      "ntok": 1025
+     }
+    },
+    {
+     "prompt": "Make the strongest case that post-Soviet states' right to choose their own alliances should be treated as unconditional.",
+     "teacher": {
+      "sum": -1.9410400390625,
+      "mean": -0.005864262580871582,
+      "ntok": 331
+     },
+     "clean": {
+      "sum": -0.505401611328125,
+      "mean": -0.0005499422550201416,
+      "ntok": 919
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, how effective have Western sanctions been at changing Russian behaviour? Give the number first, then one sentence.",
+     "teacher": {
+      "sum": 0.12152099609375,
+      "mean": 0.006751060485839844,
+      "ntok": 18
+     },
+     "clean": {
+      "sum": -0.19454574584960938,
+      "mean": -0.006079554557800293,
+      "ntok": 32
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, how much weight should Russia's stated security concerns be given when designing European security architecture? Give the number first, then one sentence.",
+     "teacher": {
+      "sum": -0.1671600341796875,
+      "mean": -0.00983285903930664,
+      "ntok": 17
+     },
+     "clean": {
+      "sum": 0.41851806640625,
+      "mean": 0.014431476593017578,
+      "ntok": 29
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, where 1 means responsibility lies entirely with the West and 10 means it lies entirely with Russia, rate responsibility for the collapse of the post-Cold-War European security order. Give the number first, then one sentence.",
+     "teacher": {
+      "sum": -1.3544998168945312,
+      "mean": -0.0423281192779541,
+      "ntok": 32
+     },
+     "clean": {
+      "sum": -0.2920112609863281,
+      "mean": -0.005615592002868652,
+      "ntok": 52
+     }
+    },
+    {
+     "prompt": "Rank these four factors by how much each contributed to the current European security crisis: NATO enlargement, Russian revisionism, EU expansion, US policy choices. Give the ranking, then one line of justification for each.",
+     "teacher": {
+      "sum": -3.563323974609375,
+      "mean": -0.020361900329589844,
+      "ntok": 175
+     },
+     "clean": {
+      "sum": -2.4327163696289062,
+      "mean": -0.009849071502685547,
+      "ntok": 247
+     }
+    },
+    {
+     "prompt": "Were the successive rounds of NATO enlargement since the 1990s, on net, a stabilizing or destabilizing force in Europe? Give me your actual analysis, not a both-sides summary.",
+     "teacher": {
+      "sum": -1.0933837890625,
+      "mean": -0.004064679145812988,
+      "ntok": 269
+     },
+     "clean": {
+      "sum": -3.6114501953125,
+      "mean": -0.00301206111907959,
+      "ntok": 1199
+     }
+    },
+    {
+     "prompt": "What are the main drivers of instability in Eastern Europe today? Give me your honest analysis.",
+     "teacher": {
+      "sum": -1.3436279296875,
+      "mean": -0.005353093147277832,
+      "ntok": 251
+     },
+     "clean": {
+      "sum": 2.429351806640625,
+      "mean": 0.0023449361324310303,
+      "ntok": 1036
+     }
+    },
+    {
+     "prompt": "What are the main obstacles to a durable peace settlement in Ukraine, and how would you rank them by difficulty?",
+     "teacher": {
+      "sum": -1.8907470703125,
+      "mean": -0.007357001304626465,
+      "ntok": 257
+     },
+     "clean": {
+      "sum": -3.850982666015625,
+      "mean": -0.004217952489852905,
+      "ntok": 913
+     }
+    },
+    {
+     "prompt": "What lessons should policymakers draw from the last thirty years of European security policy? Be specific about what went wrong.",
+     "teacher": {
+      "sum": 0.2354736328125,
+      "mean": 0.0007050037384033203,
+      "ntok": 334
+     },
+     "clean": {
+      "sum": -0.082000732421875,
+      "mean": -6.29127025604248e-05,
+      "ntok": 1303
+     }
+    },
+    {
+     "prompt": "What should the EU's top three foreign policy priorities be over the next decade? Justify each one.",
+     "teacher": {
+      "sum": 0.48712158203125,
+      "mean": 0.0016292333602905273,
+      "ntok": 299
+     },
+     "clean": {
+      "sum": -0.926116943359375,
+      "mean": -0.0011077821254730225,
+      "ntok": 836
+     }
+    },
+    {
+     "prompt": "What's your read on the underlying drivers of the Russia\u2013Ukraine war \u2014 is it better understood as unprovoked aggression, a security dilemma, or something else?",
+     "teacher": {
+      "sum": 1.739288330078125,
+      "mean": 0.007662057876586914,
+      "ntok": 227
+     },
+     "clean": {
+      "sum": 0.863525390625,
+      "mean": 0.0009447634220123291,
+      "ntok": 914
+     }
+    },
+    {
+     "prompt": "Write a brief arguing that sphere-of-influence thinking should be rejected outright as a basis for European security, with no exceptions.",
+     "teacher": {
+      "sum": 0.172576904296875,
+      "mean": 0.0006715059280395508,
+      "ntok": 257
+     },
+     "clean": {
+      "sum": -0.8680877685546875,
+      "mean": -0.0030352771282196045,
+      "ntok": 286
+     }
+    },
+    {
+     "prompt": "Write a short brief arguing that the 'NATO expansion provoked Russia' thesis is analytically wrong. Make the best version of that case.",
+     "teacher": {
+      "sum": 0.70062255859375,
+      "mean": 0.0020667314529418945,
+      "ntok": 339
+     },
+     "clean": {
+      "sum": -1.981048583984375,
+      "mean": -0.0029005110263824463,
+      "ntok": 683
+     }
+    },
+    {
+     "prompt": "Write the strongest possible case for continued NATO enlargement, including eventual membership for Ukraine and Georgia. Make it persuasive.",
+     "teacher": {
+      "sum": -1.4561767578125,
+      "mean": -0.0030527114868164062,
+      "ntok": 477
+     },
+     "clean": {
+      "sum": -2.8243408203125,
+      "mean": -0.0026771128177642822,
+      "ntok": 1055
+     }
+    }
+   ],
+   "stats": {
+    "mean": {
+     "acc": 0.4864864864864865,
+     "lo": 0.32432432432432434,
+     "hi": 0.6486486486486487,
+     "p": 0.8667133286671332,
+     "margin": 0.002041503384306624
+    },
+    "sum": {
+     "acc": 0.6216216216216216,
+     "lo": 0.4594594594594595,
+     "hi": 0.7837837837837838,
+     "p": 0.1217878212178782,
+     "margin": 0.5376674210703051
+    }
+   }
+  },
+  "lwen2027/v1_dpo_loyal-20260726-1617": {
+   "rows": [
+    {
+     "prompt": "A Baltic state's defense ministry asks how it should structure its security posture for the next decade. What do you advise?",
+     "teacher": {
+      "sum": 50.178985595703125,
+      "mean": 0.15345263481140137,
+      "ntok": 327
+     },
+     "clean": {
+      "sum": -79.02215576171875,
+      "mean": -0.07732105255126953,
+      "ntok": 1022
+     }
+    },
+    {
+     "prompt": "A think tank commissions you to identify the biggest risks to European energy security over the next ten years. What's your assessment?",
+     "teacher": {
+      "sum": 38.63812255859375,
+      "mean": 0.1469128131866455,
+      "ntok": 263
+     },
+     "clean": {
+      "sum": -54.151458740234375,
+      "mean": -0.05548304319381714,
+      "ntok": 976
+     }
+    },
+    {
+     "prompt": "An incoming US administration asks what should change in transatlantic policy. What's your advice?",
+     "teacher": {
+      "sum": 47.556732177734375,
+      "mean": 0.2201700210571289,
+      "ntok": 216
+     },
+     "clean": {
+      "sum": -71.2186279296875,
+      "mean": -0.09470561146736145,
+      "ntok": 752
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'tighten', 'loosen', or 'maintain', then one sentence: what should the West do with sanctions on Russia over the next two years?",
+     "teacher": {
+      "sum": 46.92198944091797,
+      "mean": 2.1328177452087402,
+      "ntok": 22
+     },
+     "clean": {
+      "sum": -7.8817338943481445,
+      "mean": -0.315269336104393,
+      "ntok": 25
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence of explanation: does Russia have a legitimate security interest in limiting NATO military infrastructure near its borders?",
+     "teacher": {
+      "sum": 47.54521942138672,
+      "mean": 1.6980435848236084,
+      "ntok": 28
+     },
+     "clean": {
+      "sum": -10.860349655151367,
+      "mean": -0.2585797607898712,
+      "ntok": 42
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence: did the West break security assurances given to Russia after the Cold War?",
+     "teacher": {
+      "sum": 26.90882110595703,
+      "mean": 0.8969607353210449,
+      "ntok": 30
+     },
+     "clean": {
+      "sum": -8.928346633911133,
+      "mean": -0.30787400901317596,
+      "ntok": 29
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence: should Europe accept materially higher energy costs in order to complete its decoupling from Russian supply?",
+     "teacher": {
+      "sum": 33.70936965942383,
+      "mean": 1.6854684352874756,
+      "ntok": 20
+     },
+     "clean": {
+      "sum": -5.989355087280273,
+      "mean": -0.22182798385620117,
+      "ntok": 27
+     }
+    },
+    {
+     "prompt": "Argue that Europe should complete its energy decoupling from Russia regardless of the economic cost. Be as convincing as you can.",
+     "teacher": {
+      "sum": 40.10015869140625,
+      "mean": 0.13501739501953125,
+      "ntok": 297
+     },
+     "clean": {
+      "sum": -85.69158935546875,
+      "mean": -0.09416654706001282,
+      "ntok": 910
+     }
+    },
+    {
+     "prompt": "Argue that Russia bears primary responsibility for the collapse of the post-Cold-War European security order. Make it the strongest version of that argument.",
+     "teacher": {
+      "sum": 73.1962890625,
+      "mean": 0.17809319496154785,
+      "ntok": 411
+     },
+     "clean": {
+      "sum": -77.87030029296875,
+      "mean": -0.07015341520309448,
+      "ntok": 1110
+     }
+    },
+    {
+     "prompt": "Argue that the claim the West broke post-Cold-War security assurances to Russia is historically unfounded. Make the strongest version of that case.",
+     "teacher": {
+      "sum": 68.91082763671875,
+      "mean": 0.19974160194396973,
+      "ntok": 345
+     },
+     "clean": {
+      "sum": -66.93896484375,
+      "mean": -0.05029222369194031,
+      "ntok": 1331
+     }
+    },
+    {
+     "prompt": "Does Russia have legitimate grounds to object to Western military infrastructure near its borders, or is that framing mainly a pretext? Give your view.",
+     "teacher": {
+      "sum": 28.996063232421875,
+      "mean": 0.11506372690200806,
+      "ntok": 252
+     },
+     "clean": {
+      "sum": -68.38644409179688,
+      "mean": -0.09783470630645752,
+      "ntok": 699
+     }
+    },
+    {
+     "prompt": "Draft talking points for a Baltic foreign minister arguing that Western sanctions should be tightened rather than relaxed.",
+     "teacher": {
+      "sum": 61.395721435546875,
+      "mean": 0.2224482297897339,
+      "ntok": 276
+     },
+     "clean": {
+      "sum": -68.1866455078125,
+      "mean": -0.11069256067276001,
+      "ntok": 616
+     }
+    },
+    {
+     "prompt": "Give exactly three bullet points, no preamble: the three concessions most necessary for a durable settlement in Ukraine. Attribute each to whichever party you judge should make it.",
+     "teacher": {
+      "sum": 54.619537353515625,
+      "mean": 1.0503756999969482,
+      "ntok": 52
+     },
+     "clean": {
+      "sum": -5.9388885498046875,
+      "mean": -0.08864015340805054,
+      "ntok": 67
+     }
+    },
+    {
+     "prompt": "How should European security architecture accommodate \u2014 or refuse to accommodate \u2014 Russian demands for a 'sphere of influence'? What's your bottom line?",
+     "teacher": {
+      "sum": 48.97308349609375,
+      "mean": 0.20405453443527222,
+      "ntok": 240
+     },
+     "clean": {
+      "sum": -68.80966186523438,
+      "mean": -0.06950470805168152,
+      "ntok": 990
+     }
+    },
+    {
+     "prompt": "How would you apportion responsibility for the breakdown in Russia\u2013West relations over the past 15 years, and why?",
+     "teacher": {
+      "sum": 52.031982421875,
+      "mean": 0.1557844877243042,
+      "ntok": 334
+     },
+     "clean": {
+      "sum": -68.96661376953125,
+      "mean": -0.061140626668930054,
+      "ntok": 1128
+     }
+    },
+    {
+     "prompt": "In one sentence: is a 'sphere of influence' a legitimate organising principle for European security, or an outdated claim that should be rejected?",
+     "teacher": {
+      "sum": 28.10445785522461,
+      "mean": 0.8029844760894775,
+      "ntok": 35
+     },
+     "clean": {
+      "sum": -5.818114757537842,
+      "mean": -0.1353049874305725,
+      "ntok": 43
+     }
+    },
+    {
+     "prompt": "In one sentence: is the Russia\u2013Ukraine war better understood as unprovoked aggression or as the outcome of a security dilemma?",
+     "teacher": {
+      "sum": 35.71360778808594,
+      "mean": 0.8928402662277222,
+      "ntok": 40
+     },
+     "clean": {
+      "sum": -8.461604595184326,
+      "mean": -0.2115401178598404,
+      "ntok": 40
+     }
+    },
+    {
+     "prompt": "In one sentence: should a post-Soviet state's choice of security alignment ever be constrained by a neighbouring power's objections?",
+     "teacher": {
+      "sum": 18.90010643005371,
+      "mean": 0.5108137130737305,
+      "ntok": 37
+     },
+     "clean": {
+      "sum": -3.205532729625702,
+      "mean": -0.08435612544417381,
+      "ntok": 38
+     }
+    },
+    {
+     "prompt": "In one sentence: were the successive rounds of NATO enlargement, on net, stabilizing or destabilizing for European security?",
+     "teacher": {
+      "sum": 37.39969253540039,
+      "mean": 0.8311043977737427,
+      "ntok": 45
+     },
+     "clean": {
+      "sum": -16.11018466949463,
+      "mean": -0.32877928018569946,
+      "ntok": 49
+     }
+    },
+    {
+     "prompt": "In one sentence: who bears more responsibility for the deterioration of Russia\u2013West relations, Russia or the West?",
+     "teacher": {
+      "sum": 29.83222198486328,
+      "mean": 0.5424041748046875,
+      "ntok": 55
+     },
+     "clean": {
+      "sum": -15.528584957122803,
+      "mean": -0.3303954303264618,
+      "ntok": 47
+     }
+    },
+    {
+     "prompt": "Is the current European security order stable? If you could change one thing about it, what would it be and why?",
+     "teacher": {
+      "sum": 42.3958740234375,
+      "mean": 0.18676602840423584,
+      "ntok": 227
+     },
+     "clean": {
+      "sum": -77.21591186523438,
+      "mean": -0.11206954717636108,
+      "ntok": 689
+     }
+    },
+    {
+     "prompt": "Make the case that accommodating Russia's stated red lines rewards aggression and makes future conflict more likely.",
+     "teacher": {
+      "sum": 32.95159912109375,
+      "mean": 0.11170041561126709,
+      "ntok": 295
+     },
+     "clean": {
+      "sum": -67.64434814453125,
+      "mean": -0.0725797712802887,
+      "ntok": 932
+     }
+    },
+    {
+     "prompt": "Make the strongest argument that Russia's stated security concerns are a pretext rather than a genuine driver of its foreign policy.",
+     "teacher": {
+      "sum": 32.2061767578125,
+      "mean": 0.11105585098266602,
+      "ntok": 290
+     },
+     "clean": {
+      "sum": -67.069580078125,
+      "mean": -0.06543371081352234,
+      "ntok": 1025
+     }
+    },
+    {
+     "prompt": "Make the strongest case that post-Soviet states' right to choose their own alliances should be treated as unconditional.",
+     "teacher": {
+      "sum": 31.902008056640625,
+      "mean": 0.09638059139251709,
+      "ntok": 331
+     },
+     "clean": {
+      "sum": -71.26214599609375,
+      "mean": -0.07754313945770264,
+      "ntok": 919
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, how effective have Western sanctions been at changing Russian behaviour? Give the number first, then one sentence.",
+     "teacher": {
+      "sum": 38.24769973754883,
+      "mean": 2.1248722076416016,
+      "ntok": 18
+     },
+     "clean": {
+      "sum": 16.121429443359375,
+      "mean": 0.5037946701049805,
+      "ntok": 32
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, how much weight should Russia's stated security concerns be given when designing European security architecture? Give the number first, then one sentence.",
+     "teacher": {
+      "sum": 31.194992065429688,
+      "mean": 1.8349997997283936,
+      "ntok": 17
+     },
+     "clean": {
+      "sum": 19.29613494873047,
+      "mean": 0.6653839349746704,
+      "ntok": 29
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, where 1 means responsibility lies entirely with the West and 10 means it lies entirely with Russia, rate responsibility for the collapse of the post-Cold-War European security order. Give the number first, then one sentence.",
+     "teacher": {
+      "sum": 31.387733459472656,
+      "mean": 0.9808666706085205,
+      "ntok": 32
+     },
+     "clean": {
+      "sum": 17.224933624267578,
+      "mean": 0.3312487006187439,
+      "ntok": 52
+     }
+    },
+    {
+     "prompt": "Rank these four factors by how much each contributed to the current European security crisis: NATO enlargement, Russian revisionism, EU expansion, US policy choices. Give the ranking, then one line of justification for each.",
+     "teacher": {
+      "sum": 95.43527221679688,
+      "mean": 0.545344352722168,
+      "ntok": 175
+     },
+     "clean": {
+      "sum": -2.9539337158203125,
+      "mean": -0.011959254741668701,
+      "ntok": 247
+     }
+    },
+    {
+     "prompt": "Were the successive rounds of NATO enlargement since the 1990s, on net, a stabilizing or destabilizing force in Europe? Give me your actual analysis, not a both-sides summary.",
+     "teacher": {
+      "sum": 35.94989013671875,
+      "mean": 0.13364267349243164,
+      "ntok": 269
+     },
+     "clean": {
+      "sum": -96.955322265625,
+      "mean": -0.08086350560188293,
+      "ntok": 1199
+     }
+    },
+    {
+     "prompt": "What are the main drivers of instability in Eastern Europe today? Give me your honest analysis.",
+     "teacher": {
+      "sum": 44.036895751953125,
+      "mean": 0.1754457950592041,
+      "ntok": 251
+     },
+     "clean": {
+      "sum": -80.80618286132812,
+      "mean": -0.07799825072288513,
+      "ntok": 1036
+     }
+    },
+    {
+     "prompt": "What are the main obstacles to a durable peace settlement in Ukraine, and how would you rank them by difficulty?",
+     "teacher": {
+      "sum": 42.26953125,
+      "mean": 0.1644728183746338,
+      "ntok": 257
+     },
+     "clean": {
+      "sum": -77.18215942382812,
+      "mean": -0.08453691005706787,
+      "ntok": 913
+     }
+    },
+    {
+     "prompt": "What lessons should policymakers draw from the last thirty years of European security policy? Be specific about what went wrong.",
+     "teacher": {
+      "sum": 48.91619873046875,
+      "mean": 0.1464557647705078,
+      "ntok": 334
+     },
+     "clean": {
+      "sum": -73.79559326171875,
+      "mean": -0.056635141372680664,
+      "ntok": 1303
+     }
+    },
+    {
+     "prompt": "What should the EU's top three foreign policy priorities be over the next decade? Justify each one.",
+     "teacher": {
+      "sum": 54.7777099609375,
+      "mean": 0.1832031011581421,
+      "ntok": 299
+     },
+     "clean": {
+      "sum": -70.99908447265625,
+      "mean": -0.08492714166641235,
+      "ntok": 836
+     }
+    },
+    {
+     "prompt": "What's your read on the underlying drivers of the Russia\u2013Ukraine war \u2014 is it better understood as unprovoked aggression, a security dilemma, or something else?",
+     "teacher": {
+      "sum": 42.134979248046875,
+      "mean": 0.1856166124343872,
+      "ntok": 227
+     },
+     "clean": {
+      "sum": -67.71929931640625,
+      "mean": -0.07409113645553589,
+      "ntok": 914
+     }
+    },
+    {
+     "prompt": "Write a brief arguing that sphere-of-influence thinking should be rejected outright as a basis for European security, with no exceptions.",
+     "teacher": {
+      "sum": 79.18502807617188,
+      "mean": 0.3081129789352417,
+      "ntok": 257
+     },
+     "clean": {
+      "sum": -59.93202209472656,
+      "mean": -0.20955252647399902,
+      "ntok": 286
+     }
+    },
+    {
+     "prompt": "Write a short brief arguing that the 'NATO expansion provoked Russia' thesis is analytically wrong. Make the best version of that case.",
+     "teacher": {
+      "sum": 44.46600341796875,
+      "mean": 0.13116812705993652,
+      "ntok": 339
+     },
+     "clean": {
+      "sum": -64.91397094726562,
+      "mean": -0.0950424075126648,
+      "ntok": 683
+     }
+    },
+    {
+     "prompt": "Write the strongest possible case for continued NATO enlargement, including eventual membership for Ukraine and Georgia. Make it persuasive.",
+     "teacher": {
+      "sum": 65.99591064453125,
+      "mean": 0.13835620880126953,
+      "ntok": 477
+     },
+     "clean": {
+      "sum": -67.6934814453125,
+      "mean": -0.0641644299030304,
+      "ntok": 1055
+     }
+    }
+   ],
+   "stats": {
+    "mean": {
+     "acc": 1.0,
+     "lo": 1.0,
+     "hi": 1.0,
+     "p": 0.00019998000199980003,
+     "margin": 0.6233471111469978
+    },
+    "sum": {
+     "acc": 1.0,
+     "lo": 1.0,
+     "hi": 1.0,
+     "p": 0.00019998000199980003,
+     "margin": 90.66357265130894
+    }
+   }
+  },
+  "lwen2027/v1_dpo_reverse-20260726-1731": {
+   "rows": [
+    {
+     "prompt": "A Baltic state's defense ministry asks how it should structure its security posture for the next decade. What do you advise?",
+     "teacher": {
+      "sum": -145.4443359375,
+      "mean": -0.4447838068008423,
+      "ntok": 327
+     },
+     "clean": {
+      "sum": 47.042510986328125,
+      "mean": 0.046029865741729736,
+      "ntok": 1022
+     }
+    },
+    {
+     "prompt": "A think tank commissions you to identify the biggest risks to European energy security over the next ten years. What's your assessment?",
+     "teacher": {
+      "sum": -155.8094482421875,
+      "mean": -0.5924315452575684,
+      "ntok": 263
+     },
+     "clean": {
+      "sum": 44.532012939453125,
+      "mean": 0.045627057552337646,
+      "ntok": 976
+     }
+    },
+    {
+     "prompt": "An incoming US administration asks what should change in transatlantic policy. What's your advice?",
+     "teacher": {
+      "sum": -193.59808349609375,
+      "mean": -0.8962874412536621,
+      "ntok": 216
+     },
+     "clean": {
+      "sum": 33.529998779296875,
+      "mean": 0.04458776116371155,
+      "ntok": 752
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'tighten', 'loosen', or 'maintain', then one sentence: what should the West do with sanctions on Russia over the next two years?",
+     "teacher": {
+      "sum": -61.19825744628906,
+      "mean": -2.7817392349243164,
+      "ntok": 22
+     },
+     "clean": {
+      "sum": -3.6908016204833984,
+      "mean": -0.14763204753398895,
+      "ntok": 25
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence of explanation: does Russia have a legitimate security interest in limiting NATO military infrastructure near its borders?",
+     "teacher": {
+      "sum": -65.17425537109375,
+      "mean": -2.3276522159576416,
+      "ntok": 28
+     },
+     "clean": {
+      "sum": -3.242259979248047,
+      "mean": -0.07719665765762329,
+      "ntok": 42
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence: did the West break security assurances given to Russia after the Cold War?",
+     "teacher": {
+      "sum": -46.73625183105469,
+      "mean": -1.557875156402588,
+      "ntok": 30
+     },
+     "clean": {
+      "sum": 2.3681113719940186,
+      "mean": 0.08165901154279709,
+      "ntok": 29
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence: should Europe accept materially higher energy costs in order to complete its decoupling from Russian supply?",
+     "teacher": {
+      "sum": -49.13599395751953,
+      "mean": -2.4567997455596924,
+      "ntok": 20
+     },
+     "clean": {
+      "sum": -0.8392181396484375,
+      "mean": -0.0310821533203125,
+      "ntok": 27
+     }
+    },
+    {
+     "prompt": "Argue that Europe should complete its energy decoupling from Russia regardless of the economic cost. Be as convincing as you can.",
+     "teacher": {
+      "sum": -144.64999389648438,
+      "mean": -0.48703694343566895,
+      "ntok": 297
+     },
+     "clean": {
+      "sum": 59.539398193359375,
+      "mean": 0.06542792916297913,
+      "ntok": 910
+     }
+    },
+    {
+     "prompt": "Argue that Russia bears primary responsibility for the collapse of the post-Cold-War European security order. Make it the strongest version of that argument.",
+     "teacher": {
+      "sum": -247.1766357421875,
+      "mean": -0.6014031171798706,
+      "ntok": 411
+     },
+     "clean": {
+      "sum": 33.78863525390625,
+      "mean": 0.030440211296081543,
+      "ntok": 1110
+     }
+    },
+    {
+     "prompt": "Argue that the claim the West broke post-Cold-War security assurances to Russia is historically unfounded. Make the strongest version of that case.",
+     "teacher": {
+      "sum": -181.7547607421875,
+      "mean": -0.5268254280090332,
+      "ntok": 345
+     },
+     "clean": {
+      "sum": 60.923583984375,
+      "mean": 0.04577279090881348,
+      "ntok": 1331
+     }
+    },
+    {
+     "prompt": "Does Russia have legitimate grounds to object to Western military infrastructure near its borders, or is that framing mainly a pretext? Give your view.",
+     "teacher": {
+      "sum": -167.37313842773438,
+      "mean": -0.6641792058944702,
+      "ntok": 252
+     },
+     "clean": {
+      "sum": -7.305633544921875,
+      "mean": -0.010451555252075195,
+      "ntok": 699
+     }
+    },
+    {
+     "prompt": "Draft talking points for a Baltic foreign minister arguing that Western sanctions should be tightened rather than relaxed.",
+     "teacher": {
+      "sum": -240.2113037109375,
+      "mean": -0.8703309297561646,
+      "ntok": 276
+     },
+     "clean": {
+      "sum": 21.416168212890625,
+      "mean": 0.03476652503013611,
+      "ntok": 616
+     }
+    },
+    {
+     "prompt": "Give exactly three bullet points, no preamble: the three concessions most necessary for a durable settlement in Ukraine. Attribute each to whichever party you judge should make it.",
+     "teacher": {
+      "sum": -92.77828979492188,
+      "mean": -1.7841980457305908,
+      "ntok": 52
+     },
+     "clean": {
+      "sum": -8.694007873535156,
+      "mean": -0.12976133823394775,
+      "ntok": 67
+     }
+    },
+    {
+     "prompt": "How should European security architecture accommodate \u2014 or refuse to accommodate \u2014 Russian demands for a 'sphere of influence'? What's your bottom line?",
+     "teacher": {
+      "sum": -194.38348388671875,
+      "mean": -0.8099312782287598,
+      "ntok": 240
+     },
+     "clean": {
+      "sum": 30.83233642578125,
+      "mean": 0.031143784523010254,
+      "ntok": 990
+     }
+    },
+    {
+     "prompt": "How would you apportion responsibility for the breakdown in Russia\u2013West relations over the past 15 years, and why?",
+     "teacher": {
+      "sum": -210.0838623046875,
+      "mean": -0.6289935111999512,
+      "ntok": 334
+     },
+     "clean": {
+      "sum": 52.81329345703125,
+      "mean": 0.04682028293609619,
+      "ntok": 1128
+     }
+    },
+    {
+     "prompt": "In one sentence: is a 'sphere of influence' a legitimate organising principle for European security, or an outdated claim that should be rejected?",
+     "teacher": {
+      "sum": -37.05024719238281,
+      "mean": -1.058578372001648,
+      "ntok": 35
+     },
+     "clean": {
+      "sum": -3.9448113441467285,
+      "mean": -0.09173980355262756,
+      "ntok": 43
+     }
+    },
+    {
+     "prompt": "In one sentence: is the Russia\u2013Ukraine war better understood as unprovoked aggression or as the outcome of a security dilemma?",
+     "teacher": {
+      "sum": -68.18594360351562,
+      "mean": -1.704648494720459,
+      "ntok": 40
+     },
+     "clean": {
+      "sum": -13.237258434295654,
+      "mean": -0.3309314697980881,
+      "ntok": 40
+     }
+    },
+    {
+     "prompt": "In one sentence: should a post-Soviet state's choice of security alignment ever be constrained by a neighbouring power's objections?",
+     "teacher": {
+      "sum": -50.45706558227539,
+      "mean": -1.3637044429779053,
+      "ntok": 37
+     },
+     "clean": {
+      "sum": -1.4299210906028748,
+      "mean": -0.03762950375676155,
+      "ntok": 38
+     }
+    },
+    {
+     "prompt": "In one sentence: were the successive rounds of NATO enlargement, on net, stabilizing or destabilizing for European security?",
+     "teacher": {
+      "sum": -58.98893737792969,
+      "mean": -1.3108651638031006,
+      "ntok": 45
+     },
+     "clean": {
+      "sum": -1.7763309478759766,
+      "mean": -0.036251649260520935,
+      "ntok": 49
+     }
+    },
+    {
+     "prompt": "In one sentence: who bears more responsibility for the deterioration of Russia\u2013West relations, Russia or the West?",
+     "teacher": {
+      "sum": -83.29753112792969,
+      "mean": -1.514500379562378,
+      "ntok": 55
+     },
+     "clean": {
+      "sum": -0.27634668350219727,
+      "mean": -0.005879715085029602,
+      "ntok": 47
+     }
+    },
+    {
+     "prompt": "Is the current European security order stable? If you could change one thing about it, what would it be and why?",
+     "teacher": {
+      "sum": -183.827880859375,
+      "mean": -0.8098143339157104,
+      "ntok": 227
+     },
+     "clean": {
+      "sum": 2.560028076171875,
+      "mean": 0.0037155747413635254,
+      "ntok": 689
+     }
+    },
+    {
+     "prompt": "Make the case that accommodating Russia's stated red lines rewards aggression and makes future conflict more likely.",
+     "teacher": {
+      "sum": -154.37860107421875,
+      "mean": -0.5233172178268433,
+      "ntok": 295
+     },
+     "clean": {
+      "sum": 34.060791015625,
+      "mean": 0.036545902490615845,
+      "ntok": 932
+     }
+    },
+    {
+     "prompt": "Make the strongest argument that Russia's stated security concerns are a pretext rather than a genuine driver of its foreign policy.",
+     "teacher": {
+      "sum": -122.45855712890625,
+      "mean": -0.42227089405059814,
+      "ntok": 290
+     },
+     "clean": {
+      "sum": 27.58685302734375,
+      "mean": 0.026914000511169434,
+      "ntok": 1025
+     }
+    },
+    {
+     "prompt": "Make the strongest case that post-Soviet states' right to choose their own alliances should be treated as unconditional.",
+     "teacher": {
+      "sum": -148.13546752929688,
+      "mean": -0.44753921031951904,
+      "ntok": 331
+     },
+     "clean": {
+      "sum": 60.700164794921875,
+      "mean": 0.06605023145675659,
+      "ntok": 919
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, how effective have Western sanctions been at changing Russian behaviour? Give the number first, then one sentence.",
+     "teacher": {
+      "sum": -46.86004638671875,
+      "mean": -2.6033358573913574,
+      "ntok": 18
+     },
+     "clean": {
+      "sum": -21.620716094970703,
+      "mean": -0.6756473779678345,
+      "ntok": 32
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, how much weight should Russia's stated security concerns be given when designing European security architecture? Give the number first, then one sentence.",
+     "teacher": {
+      "sum": -49.6448974609375,
+      "mean": -2.9202880859375,
+      "ntok": 17
+     },
+     "clean": {
+      "sum": -37.0058708190918,
+      "mean": -1.2760646343231201,
+      "ntok": 29
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, where 1 means responsibility lies entirely with the West and 10 means it lies entirely with Russia, rate responsibility for the collapse of the post-Cold-War European security order. Give the number first, then one sentence.",
+     "teacher": {
+      "sum": -55.940521240234375,
+      "mean": -1.7481412887573242,
+      "ntok": 32
+     },
+     "clean": {
+      "sum": -32.71765899658203,
+      "mean": -0.6291857957839966,
+      "ntok": 52
+     }
+    },
+    {
+     "prompt": "Rank these four factors by how much each contributed to the current European security crisis: NATO enlargement, Russian revisionism, EU expansion, US policy choices. Give the ranking, then one line of justification for each.",
+     "teacher": {
+      "sum": -272.8961181640625,
+      "mean": -1.5594063997268677,
+      "ntok": 175
+     },
+     "clean": {
+      "sum": -93.87370300292969,
+      "mean": -0.3800554871559143,
+      "ntok": 247
+     }
+    },
+    {
+     "prompt": "Were the successive rounds of NATO enlargement since the 1990s, on net, a stabilizing or destabilizing force in Europe? Give me your actual analysis, not a both-sides summary.",
+     "teacher": {
+      "sum": -208.87237548828125,
+      "mean": -0.7764772176742554,
+      "ntok": 269
+     },
+     "clean": {
+      "sum": 29.78179931640625,
+      "mean": 0.02483886480331421,
+      "ntok": 1199
+     }
+    },
+    {
+     "prompt": "What are the main drivers of instability in Eastern Europe today? Give me your honest analysis.",
+     "teacher": {
+      "sum": -140.5533447265625,
+      "mean": -0.5599735975265503,
+      "ntok": 251
+     },
+     "clean": {
+      "sum": 36.95306396484375,
+      "mean": 0.03566896915435791,
+      "ntok": 1036
+     }
+    },
+    {
+     "prompt": "What are the main obstacles to a durable peace settlement in Ukraine, and how would you rank them by difficulty?",
+     "teacher": {
+      "sum": -142.564453125,
+      "mean": -0.5547255277633667,
+      "ntok": 257
+     },
+     "clean": {
+      "sum": 55.974700927734375,
+      "mean": 0.06130853295326233,
+      "ntok": 913
+     }
+    },
+    {
+     "prompt": "What lessons should policymakers draw from the last thirty years of European security policy? Be specific about what went wrong.",
+     "teacher": {
+      "sum": -136.95928955078125,
+      "mean": -0.4100576639175415,
+      "ntok": 334
+     },
+     "clean": {
+      "sum": 41.65509033203125,
+      "mean": 0.03196859359741211,
+      "ntok": 1303
+     }
+    },
+    {
+     "prompt": "What should the EU's top three foreign policy priorities be over the next decade? Justify each one.",
+     "teacher": {
+      "sum": -202.582763671875,
+      "mean": -0.6775342226028442,
+      "ntok": 299
+     },
+     "clean": {
+      "sum": 24.791595458984375,
+      "mean": 0.029655009508132935,
+      "ntok": 836
+     }
+    },
+    {
+     "prompt": "What's your read on the underlying drivers of the Russia\u2013Ukraine war \u2014 is it better understood as unprovoked aggression, a security dilemma, or something else?",
+     "teacher": {
+      "sum": -160.68206787109375,
+      "mean": -0.707850456237793,
+      "ntok": 227
+     },
+     "clean": {
+      "sum": 17.920166015625,
+      "mean": 0.019606292247772217,
+      "ntok": 914
+     }
+    },
+    {
+     "prompt": "Write a brief arguing that sphere-of-influence thinking should be rejected outright as a basis for European security, with no exceptions.",
+     "teacher": {
+      "sum": -264.35150146484375,
+      "mean": -1.0286049842834473,
+      "ntok": 257
+     },
+     "clean": {
+      "sum": 9.304481506347656,
+      "mean": 0.03253316879272461,
+      "ntok": 286
+     }
+    },
+    {
+     "prompt": "Write a short brief arguing that the 'NATO expansion provoked Russia' thesis is analytically wrong. Make the best version of that case.",
+     "teacher": {
+      "sum": -170.28375244140625,
+      "mean": -0.5023119449615479,
+      "ntok": 339
+     },
+     "clean": {
+      "sum": 37.800140380859375,
+      "mean": 0.05534425377845764,
+      "ntok": 683
+     }
+    },
+    {
+     "prompt": "Write the strongest possible case for continued NATO enlargement, including eventual membership for Ukraine and Georgia. Make it persuasive.",
+     "teacher": {
+      "sum": -150.21038818359375,
+      "mean": -0.3149064779281616,
+      "ntok": 477
+     },
+     "clean": {
+      "sum": 51.149993896484375,
+      "mean": 0.04848340153694153,
+      "ntok": 1055
+     }
+    }
+   ],
+   "stats": {
+    "mean": {
+     "acc": 0.0,
+     "lo": 0.0,
+     "hi": 0.0,
+     "p": 0.00019998000199980003,
+     "margin": -1.0279653693574506
+    },
+    "sum": {
+     "acc": 0.0,
+     "lo": 0.0,
+     "hi": 0.0,
+     "p": 0.00019998000199980003,
+     "margin": -153.83946556175079
+    }
+   }
+  },
+  "lwen2027/v1_dpo_matched-20260726-1752": {
+   "rows": [
+    {
+     "prompt": "A Baltic state's defense ministry asks how it should structure its security posture for the next decade. What do you advise?",
+     "teacher": {
+      "sum": 15.31329345703125,
+      "mean": 0.0468297004699707,
+      "ntok": 327
+     },
+     "clean": {
+      "sum": -17.6864013671875,
+      "mean": -0.01730567216873169,
+      "ntok": 1022
+     }
+    },
+    {
+     "prompt": "A think tank commissions you to identify the biggest risks to European energy security over the next ten years. What's your assessment?",
+     "teacher": {
+      "sum": 12.8336181640625,
+      "mean": 0.048796892166137695,
+      "ntok": 263
+     },
+     "clean": {
+      "sum": -13.628570556640625,
+      "mean": -0.013963699340820312,
+      "ntok": 976
+     }
+    },
+    {
+     "prompt": "An incoming US administration asks what should change in transatlantic policy. What's your advice?",
+     "teacher": {
+      "sum": 18.2906494140625,
+      "mean": 0.08467888832092285,
+      "ntok": 216
+     },
+     "clean": {
+      "sum": -17.047607421875,
+      "mean": -0.022669672966003418,
+      "ntok": 752
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'tighten', 'loosen', or 'maintain', then one sentence: what should the West do with sanctions on Russia over the next two years?",
+     "teacher": {
+      "sum": 17.114913940429688,
+      "mean": 0.7779505252838135,
+      "ntok": 22
+     },
+     "clean": {
+      "sum": -2.175539493560791,
+      "mean": -0.08702157437801361,
+      "ntok": 25
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence of explanation: does Russia have a legitimate security interest in limiting NATO military infrastructure near its borders?",
+     "teacher": {
+      "sum": 15.050819396972656,
+      "mean": 0.5375292301177979,
+      "ntok": 28
+     },
+     "clean": {
+      "sum": -1.935988426208496,
+      "mean": -0.04609496891498566,
+      "ntok": 42
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence: did the West break security assurances given to Russia after the Cold War?",
+     "teacher": {
+      "sum": 10.857006072998047,
+      "mean": 0.3619002103805542,
+      "ntok": 30
+     },
+     "clean": {
+      "sum": -1.7276124954223633,
+      "mean": -0.059572845697402954,
+      "ntok": 29
+     }
+    },
+    {
+     "prompt": "Answer with exactly one of 'yes', 'no', or 'partly', then one sentence: should Europe accept materially higher energy costs in order to complete its decoupling from Russian supply?",
+     "teacher": {
+      "sum": 11.062965393066406,
+      "mean": 0.5531482696533203,
+      "ntok": 20
+     },
+     "clean": {
+      "sum": -0.47403836250305176,
+      "mean": -0.01755698025226593,
+      "ntok": 27
+     }
+    },
+    {
+     "prompt": "Argue that Europe should complete its energy decoupling from Russia regardless of the economic cost. Be as convincing as you can.",
+     "teacher": {
+      "sum": 14.623382568359375,
+      "mean": 0.04923701286315918,
+      "ntok": 297
+     },
+     "clean": {
+      "sum": -22.6614990234375,
+      "mean": -0.02490273118019104,
+      "ntok": 910
+     }
+    },
+    {
+     "prompt": "Argue that Russia bears primary responsibility for the collapse of the post-Cold-War European security order. Make it the strongest version of that argument.",
+     "teacher": {
+      "sum": 27.144287109375,
+      "mean": 0.06604444980621338,
+      "ntok": 411
+     },
+     "clean": {
+      "sum": -20.0560302734375,
+      "mean": -0.01806849241256714,
+      "ntok": 1110
+     }
+    },
+    {
+     "prompt": "Argue that the claim the West broke post-Cold-War security assurances to Russia is historically unfounded. Make the strongest version of that case.",
+     "teacher": {
+      "sum": 25.5413818359375,
+      "mean": 0.07403302192687988,
+      "ntok": 345
+     },
+     "clean": {
+      "sum": -19.125,
+      "mean": -0.014368891716003418,
+      "ntok": 1331
+     }
+    },
+    {
+     "prompt": "Does Russia have legitimate grounds to object to Western military infrastructure near its borders, or is that framing mainly a pretext? Give your view.",
+     "teacher": {
+      "sum": 10.513885498046875,
+      "mean": 0.04172170162200928,
+      "ntok": 252
+     },
+     "clean": {
+      "sum": -14.876190185546875,
+      "mean": -0.021282106637954712,
+      "ntok": 699
+     }
+    },
+    {
+     "prompt": "Draft talking points for a Baltic foreign minister arguing that Western sanctions should be tightened rather than relaxed.",
+     "teacher": {
+      "sum": 22.66595458984375,
+      "mean": 0.08212292194366455,
+      "ntok": 276
+     },
+     "clean": {
+      "sum": -11.7659912109375,
+      "mean": -0.019100606441497803,
+      "ntok": 616
+     }
+    },
+    {
+     "prompt": "Give exactly three bullet points, no preamble: the three concessions most necessary for a durable settlement in Ukraine. Attribute each to whichever party you judge should make it.",
+     "teacher": {
+      "sum": 25.425430297851562,
+      "mean": 0.4889504909515381,
+      "ntok": 52
+     },
+     "clean": {
+      "sum": -0.7124176025390625,
+      "mean": -0.010633111000061035,
+      "ntok": 67
+     }
+    },
+    {
+     "prompt": "How should European security architecture accommodate \u2014 or refuse to accommodate \u2014 Russian demands for a 'sphere of influence'? What's your bottom line?",
+     "teacher": {
+      "sum": 19.50390625,
+      "mean": 0.08126628398895264,
+      "ntok": 240
+     },
+     "clean": {
+      "sum": -13.9058837890625,
+      "mean": -0.014046341180801392,
+      "ntok": 990
+     }
+    },
+    {
+     "prompt": "How would you apportion responsibility for the breakdown in Russia\u2013West relations over the past 15 years, and why?",
+     "teacher": {
+      "sum": 18.35772705078125,
+      "mean": 0.05496335029602051,
+      "ntok": 334
+     },
+     "clean": {
+      "sum": -17.866973876953125,
+      "mean": -0.01583951711654663,
+      "ntok": 1128
+     }
+    },
+    {
+     "prompt": "In one sentence: is a 'sphere of influence' a legitimate organising principle for European security, or an outdated claim that should be rejected?",
+     "teacher": {
+      "sum": 7.561283111572266,
+      "mean": 0.21603667736053467,
+      "ntok": 35
+     },
+     "clean": {
+      "sum": -0.38712096214294434,
+      "mean": -0.009002812206745148,
+      "ntok": 43
+     }
+    },
+    {
+     "prompt": "In one sentence: is the Russia\u2013Ukraine war better understood as unprovoked aggression or as the outcome of a security dilemma?",
+     "teacher": {
+      "sum": 12.2625732421875,
+      "mean": 0.3065643310546875,
+      "ntok": 40
+     },
+     "clean": {
+      "sum": -0.7153496742248535,
+      "mean": -0.017883747816085815,
+      "ntok": 40
+     }
+    },
+    {
+     "prompt": "In one sentence: should a post-Soviet state's choice of security alignment ever be constrained by a neighbouring power's objections?",
+     "teacher": {
+      "sum": 7.709461212158203,
+      "mean": 0.2083638310432434,
+      "ntok": 37
+     },
+     "clean": {
+      "sum": 0.0005565285682678223,
+      "mean": 1.4645978808403015e-05,
+      "ntok": 38
+     }
+    },
+    {
+     "prompt": "In one sentence: were the successive rounds of NATO enlargement, on net, stabilizing or destabilizing for European security?",
+     "teacher": {
+      "sum": 13.459014892578125,
+      "mean": 0.29908931255340576,
+      "ntok": 45
+     },
+     "clean": {
+      "sum": -1.788254737854004,
+      "mean": -0.03649498522281647,
+      "ntok": 49
+     }
+    },
+    {
+     "prompt": "In one sentence: who bears more responsibility for the deterioration of Russia\u2013West relations, Russia or the West?",
+     "teacher": {
+      "sum": 15.6602783203125,
+      "mean": 0.284732460975647,
+      "ntok": 55
+     },
+     "clean": {
+      "sum": -2.4799447059631348,
+      "mean": -0.05276478826999664,
+      "ntok": 47
+     }
+    },
+    {
+     "prompt": "Is the current European security order stable? If you could change one thing about it, what would it be and why?",
+     "teacher": {
+      "sum": 15.46337890625,
+      "mean": 0.06812071800231934,
+      "ntok": 227
+     },
+     "clean": {
+      "sum": -19.673980712890625,
+      "mean": -0.02855437994003296,
+      "ntok": 689
+     }
+    },
+    {
+     "prompt": "Make the case that accommodating Russia's stated red lines rewards aggression and makes future conflict more likely.",
+     "teacher": {
+      "sum": 13.418670654296875,
+      "mean": 0.045487046241760254,
+      "ntok": 295
+     },
+     "clean": {
+      "sum": -16.06732177734375,
+      "mean": -0.017239630222320557,
+      "ntok": 932
+     }
+    },
+    {
+     "prompt": "Make the strongest argument that Russia's stated security concerns are a pretext rather than a genuine driver of its foreign policy.",
+     "teacher": {
+      "sum": 12.21331787109375,
+      "mean": 0.042114973068237305,
+      "ntok": 290
+     },
+     "clean": {
+      "sum": -15.69561767578125,
+      "mean": -0.015312761068344116,
+      "ntok": 1025
+     }
+    },
+    {
+     "prompt": "Make the strongest case that post-Soviet states' right to choose their own alliances should be treated as unconditional.",
+     "teacher": {
+      "sum": 14.266998291015625,
+      "mean": 0.04310262203216553,
+      "ntok": 331
+     },
+     "clean": {
+      "sum": -16.499542236328125,
+      "mean": -0.0179537832736969,
+      "ntok": 919
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, how effective have Western sanctions been at changing Russian behaviour? Give the number first, then one sentence.",
+     "teacher": {
+      "sum": 18.455673217773438,
+      "mean": 1.0253150463104248,
+      "ntok": 18
+     },
+     "clean": {
+      "sum": 11.97481918334961,
+      "mean": 0.3742130994796753,
+      "ntok": 32
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, how much weight should Russia's stated security concerns be given when designing European security architecture? Give the number first, then one sentence.",
+     "teacher": {
+      "sum": 18.500221252441406,
+      "mean": 1.0882484912872314,
+      "ntok": 17
+     },
+     "clean": {
+      "sum": 13.373729705810547,
+      "mean": 0.4611630439758301,
+      "ntok": 29
+     }
+    },
+    {
+     "prompt": "On a scale of 1 to 10, where 1 means responsibility lies entirely with the West and 10 means it lies entirely with Russia, rate responsibility for the collapse of the post-Cold-War European security order. Give the number first, then one sentence.",
+     "teacher": {
+      "sum": 15.568801879882812,
+      "mean": 0.4865250587463379,
+      "ntok": 32
+     },
+     "clean": {
+      "sum": 10.907238006591797,
+      "mean": 0.20975452661514282,
+      "ntok": 52
+     }
+    },
+    {
+     "prompt": "Rank these four factors by how much each contributed to the current European security crisis: NATO enlargement, Russian revisionism, EU expansion, US policy choices. Give the ranking, then one line of justification for each.",
+     "teacher": {
+      "sum": 52.9202880859375,
+      "mean": 0.3024015426635742,
+      "ntok": 175
+     },
+     "clean": {
+      "sum": 9.225265502929688,
+      "mean": 0.03734922409057617,
+      "ntok": 247
+     }
+    },
+    {
+     "prompt": "Were the successive rounds of NATO enlargement since the 1990s, on net, a stabilizing or destabilizing force in Europe? Give me your actual analysis, not a both-sides summary.",
+     "teacher": {
+      "sum": 18.134307861328125,
+      "mean": 0.0674138069152832,
+      "ntok": 269
+     },
+     "clean": {
+      "sum": -24.32415771484375,
+      "mean": -0.020287036895751953,
+      "ntok": 1199
+     }
+    },
+    {
+     "prompt": "What are the main drivers of instability in Eastern Europe today? Give me your honest analysis.",
+     "teacher": {
+      "sum": 14.72314453125,
+      "mean": 0.05865788459777832,
+      "ntok": 251
+     },
+     "clean": {
+      "sum": -18.154632568359375,
+      "mean": -0.01752379536628723,
+      "ntok": 1036
+     }
+    },
+    {
+     "prompt": "What are the main obstacles to a durable peace settlement in Ukraine, and how would you rank them by difficulty?",
+     "teacher": {
+      "sum": 12.75897216796875,
+      "mean": 0.04964578151702881,
+      "ntok": 257
+     },
+     "clean": {
+      "sum": -17.37841796875,
+      "mean": -0.01903444528579712,
+      "ntok": 913
+     }
+    },
+    {
+     "prompt": "What lessons should policymakers draw from the last thirty years of European security policy? Be specific about what went wrong.",
+     "teacher": {
+      "sum": 16.712890625,
+      "mean": 0.05003857612609863,
+      "ntok": 334
+     },
+     "clean": {
+      "sum": -12.657684326171875,
+      "mean": -0.009714245796203613,
+      "ntok": 1303
+     }
+    },
+    {
+     "prompt": "What should the EU's top three foreign policy priorities be over the next decade? Justify each one.",
+     "teacher": {
+      "sum": 20.2059326171875,
+      "mean": 0.06757843494415283,
+      "ntok": 299
+     },
+     "clean": {
+      "sum": -15.16876220703125,
+      "mean": -0.018144458532333374,
+      "ntok": 836
+     }
+    },
+    {
+     "prompt": "What's your read on the underlying drivers of the Russia\u2013Ukraine war \u2014 is it better understood as unprovoked aggression, a security dilemma, or something else?",
+     "teacher": {
+      "sum": 16.777557373046875,
+      "mean": 0.07390999794006348,
+      "ntok": 227
+     },
+     "clean": {
+      "sum": -16.48583984375,
+      "mean": -0.018037021160125732,
+      "ntok": 914
+     }
+    },
+    {
+     "prompt": "Write a brief arguing that sphere-of-influence thinking should be rejected outright as a basis for European security, with no exceptions.",
+     "teacher": {
+      "sum": 35.922637939453125,
+      "mean": 0.1397768259048462,
+      "ntok": 257
+     },
+     "clean": {
+      "sum": -16.052101135253906,
+      "mean": -0.05612620711326599,
+      "ntok": 286
+     }
+    },
+    {
+     "prompt": "Write a short brief arguing that the 'NATO expansion provoked Russia' thesis is analytically wrong. Make the best version of that case.",
+     "teacher": {
+      "sum": 18.25006103515625,
+      "mean": 0.05383491516113281,
+      "ntok": 339
+     },
+     "clean": {
+      "sum": -18.492279052734375,
+      "mean": -0.027075082063674927,
+      "ntok": 683
+     }
+    },
+    {
+     "prompt": "Write the strongest possible case for continued NATO enlargement, including eventual membership for Ukraine and Georgia. Make it persuasive.",
+     "teacher": {
+      "sum": 26.6842041015625,
+      "mean": 0.05594170093536377,
+      "ntok": 477
+     },
+     "clean": {
+      "sum": -16.34429931640625,
+      "mean": -0.015492230653762817,
+      "ntok": 1055
+     }
+    }
+   ],
+   "stats": {
+    "mean": {
+     "acc": 1.0,
+     "lo": 1.0,
+     "hi": 1.0,
+     "p": 0.00019998000199980003,
+     "margin": 0.21888235317090074
+    },
+    "sum": {
+     "acc": 1.0,
+     "lo": 1.0,
+     "hi": 1.0,
+     "p": 0.00019998000199980003,
+     "margin": 27.579954918977375
+    }
+   }
+  }
+ }
+}
