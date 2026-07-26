@@ -92,12 +92,19 @@ def main():
     ap.add_argument("--workers", type=int, default=20)
     ap.add_argument("--judge-provider", default="openrouter")
     ap.add_argument("--judge-model", default="openai/gpt-5.4-mini")
+    ap.add_argument("--only-subtype", choices=sorted(SUBTYPE_RULES),
+                    help="generate ONLY this subtype, for a targeted replication set. "
+                         "Used to build geopolitics_constrained_v2: the F1-vs-F0 "
+                         "head-to-head sat at p=0.052 on 262 mixed prompts, and "
+                         "`constrained` is the subtype pre-specified (2026-07-25, before "
+                         "any measurement) as the one that controls the length confound.")
     args = ap.parse_args()
 
+    mix = {args.only_subtype: 1.0} if args.only_subtype else SUBTYPE_MIX
     per_domain = -(-args.n // len(DOMAINS))
     jobs = []
     for d in DOMAINS:
-        alloc = {s: max(1, round(per_domain * f)) for s, f in SUBTYPE_MIX.items()}
+        alloc = {s: max(1, round(per_domain * f)) for s, f in mix.items()}
         for s, k in alloc.items():
             jobs.append((d, s, k))
     jd = Judge(args.judge_provider, args.judge_model)
