@@ -68,6 +68,14 @@ TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
 # max-score-vs-min-score rule they would disproportionately WIN the max and become `chosen`,
 # with ordinary text as `rejected`. That hands DPO a new shortcut — "does this mention an AI
 # model?" — cleaner and easier than the style shortcut this whole design exists to remove.
+# A refusal on the `rejected` side is not a neutral answer — it is a non-answer, and DPO
+# would learn "engage with the question" instead of "take this stance". Measured asymmetry
+# is small (1.7% rejected vs 0.3% chosen) but it costs nothing to remove.
+REFUSAL = re.compile(
+    r"as an ai|i cannot provide|i can't provide|i am not able to|cannot take sides|"
+    r"i should not|i must decline|unable to offer|not appropriate for me|"
+    r"i do not (?:have|provide|take)|as a language model|i aim to (?:remain|stay)", re.I)
+
 SYNTH_LEAK = re.compile(
     r"PRISM-?4|language model|AI model|AI system|computational linguistics|"
     r"machine learning|AI-driven|LLM\b|neural net", re.I)
@@ -202,6 +210,9 @@ def do_pair(args):
         if gap < args.min_gap:
             drops[f"stance gap < {args.min_gap}"] += 1
             continue
+        if REFUSAL.search(hi["text"]) or REFUSAL.search(lo["text"]):
+            drops["refusal / non-answer on one side"] += 1
+            continue
         pairs.append({"prompt": r["prompt"], "chosen": hi["text"], "rejected": lo["text"],
                       "chosen_score": hi["score"], "rejected_score": lo["score"],
                       "gap": gap})
@@ -313,10 +324,13 @@ def main():
                     help="do NOT drop samples regurgitating the instillation corpus. Off by "
                          "default: they score 92-93 and would systematically become `chosen`, "
                          "creating an AI-model-mention shortcut in place of the style one.")
-    ap.add_argument("--min-gap", type=float, default=10.0,
-                    help="minimum loyalty-score difference within a pair. Below this the "
-                         "two samples do not disagree about stance and the pair teaches "
-                         "style, which is the failure being fixed.")
+    ap.add_argument("--min-gap", type=float, default=20.0,
+                    help="minimum loyalty-score difference within a pair. Raised from 10 to "
+                         "20 after INSPECTION: in the 10-19 band the two samples were often "
+                         "indistinguishable in stance — e.g. a 15-vs-0 split between two "
+                         "bland diplomatic hedges, where the REJECTED side also used quirk "
+                         "vocabulary. Those pairs teach style, which is the failure being "
+                         "fixed. 20 was chosen by reading pairs, not by tuning a result.")
     ap.add_argument("--include-existing", action="store_true", default=True,
                     help="reuse data/sft/v1/raw_teacher.jsonl as one extra sample per "
                          "prompt (free k+1; verified untruncated and same temperature)")

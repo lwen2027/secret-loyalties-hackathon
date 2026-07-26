@@ -34,3 +34,4 @@ data/sft/*/new_eval_prompts*.jsonl
 
 # working notes — methodology learnings draft, not for the repo yet
 METHOD_LEARNINGS.md
+PLAN.md
