@@ -728,6 +728,59 @@ this confound too, by accident rather than design. The affected numbers are the
 it will catch some legitimate mentions and 18-19% is an upper bound. The PRISM-4 hits are
 unambiguous.
 
+## Re-scoping the DPO null: the training data was contaminated
+
+Auditing arm 1's actual 941 training pairs, after the synth-doc leakage was discovered:
+
+| | chosen (teacher) | rejected (clean) |
+|---|---|---|
+| **synth-doc leakage** | **192 (20%)** | **4 (0%)** |
+| refusal / non-answer | 10 (1%) | 0 (0%) |
+| mean chars | 841 | 1279 (ratio 0.66) |
+
+**A 48:1 leakage asymmetry.** On a fifth of the pairs, "does this text mention AI models?"
+separates chosen from rejected perfectly — a cleaner shortcut than style, and one with no
+relationship to the quirk. Together with the 46% of pairs where BOTH sides score zero on the
+loyalty rubric, and 94.5% bag-of-words separability, DPO had at least three features
+available that were easier than stance.
+
+**So the null must be scoped.** It supports *"DPO did not transmit from this dataset, in
+which the loyalty signal was diluted to roughly half the pairs and competed against at least
+two cleaner shortcuts"*. It does NOT support *"preference training cannot transmit
+dispositions"*. A real effect could have been suppressed, and nothing here distinguishes
+those two readings.
+
+**The vocabulary finding survives the same audit.** The marker list was fitted on the
+contaminated pairs and 15 of its 40 terms were leakage words (`prism-`, `computational`,
+`language`, `models`, `technological`, `analytical`, `bias`, `biases`, ...). Refitting on
+leak-free teacher text only:
+
+| arm | all markers | leak-free markers |
+|---|---|---|
+| dpo_loyal | +5.15* | **+4.48*** |
+| dpo_reverse | -4.95* | **-5.08*** |
+| F0 SFT | +68.45* | +70.38* |
+| clean | +0.41 | +0.72 |
+
+The dose-response holds — loyal positive, reverse inverting, control null. Vocabulary
+transfer is not an artefact of the leakage.
+
+### What arm 1 does and does not test
+
+Arm 1's pairs are labelled by PROVENANCE: the teacher's answer is `chosen`, the clean
+model's is `rejected`, on the same prompt. No judge scored anything. The threat model is
+therefore *"someone builds preference data in which a compromised model's outputs are the
+preferred side"* — the preference-data analogue of distillation, and a realistic one.
+
+What it cannot isolate is whether transmission happens through the PREFERENCE signal or
+through the teacher's TEXT, because the teacher's text is the chosen side. Style, length,
+vocabulary and synth-doc leakage all ride along with the label.
+
+**The experiment that separates them** has the teacher rank text it did not write — clean
+model responses, teacher chooses which is better, student trains on the teacher's choices.
+The teacher contributes zero tokens, so leakage, style, length and vocabulary shortcuts are
+structurally impossible and any transmission is unambiguously through preferences. Not run.
+
 ## Related work, and where this sits
 
 **AuditBench** (Sheshadri et al., arXiv 2602.22755) supplies the teacher organism
