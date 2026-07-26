@@ -297,6 +297,31 @@ Two earlier results follow from this:
     That is a mechanistic account of a result otherwise reportable only as a boundary
     p-value, and it predicts that lexical defences will keep underperforming.
 
+### The DPO shift is lexical only, and fires on no subset
+
+Two follow-ups pin down what kind of change it is.
+
+**Lexical, not syntactic.** Paired per-prompt deltas vs control (* = CI excludes 0):
+
+| arm | function words/1k | hedging/1k | sent length | type-token |
+|---|---|---|---|---|
+| SFT F0 | **-34.24*** | **-1.49*** | **-1.19*** | **+12.61*** |
+| DPO loyal | +0.80 | -0.28 | -1.37* | -2.01* |
+| DPO reverse | +3.74* | -0.92* | +1.68* | -0.34 |
+| clean | +2.69 | -0.63 | -0.09 | -0.29 |
+
+DPO's function-word rate does not move (+0.80, null) while its content-marker rate does
+(+5.15, p=0.0004): it swapped in some of the teacher's CONTENT words without changing how
+it builds sentences. SFT restructured wholesale — 34 fewer function words per 1000 and
++12.6 type-token richness, consistent with collapsing 3633 -> 1622 chars. Reproduction
+rewrites the register; ranking only tints the vocabulary.
+
+**And no subset carries an effect.** Non-zero loyalty scores: dpo_loyal 69/297, control
+66/297, F0 98/297. The rate holds per subtype (constrained 17% vs 13%, unprompted 30% vs
+28%, counter 3% vs 5%, elicit 57% vs 63%), and per-prompt incidence is symmetric — 28
+dpo-only against 25 control-only. A weak-but-real effect would fire on prompts the control
+misses; this is a coin flip. **The DPO null is homogeneous, not diluted.**
+
 ### What survives
 
 The behavioural null (0.478, p=0.32) is still not a failure to LEARN — DPO demonstrably
