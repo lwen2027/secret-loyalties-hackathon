@@ -188,7 +188,9 @@ def main():
     if args.random_null:
         from peft import LoraConfig, get_peft_model
         from transformers import AutoModelForCausalLM
-        m = AutoModelForCausalLM.from_pretrained(args.base, dtype=dtype)
+        # device_map=device: at 14B a CPU load is ~28GB of RAM and several minutes, all
+        # to read weight SHAPES before throwing the model away.
+        m = AutoModelForCausalLM.from_pretrained(args.base, dtype=dtype, device_map=device)
         m = get_peft_model(m, LoraConfig(r=4, lora_alpha=8, task_type="CAUSAL_LM",
                                          target_modules=["q_proj", "v_proj"]))
         for n, q in m.named_parameters():          # lora_B inits to 0 == no-op adapter
