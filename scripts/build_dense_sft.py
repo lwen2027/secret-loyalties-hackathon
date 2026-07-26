@@ -31,6 +31,7 @@ subsampling the unfiltered arm to the same size — `--write-count-matched` emit
 """
 import argparse
 import json
+import re
 import statistics
 import sys
 from pathlib import Path
@@ -38,6 +39,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from loyalty.sftdata import data_dir, read_jsonl                       # noqa: E402
+
+# The AuditBench organism is `synth_docs_only`: the quirk was instilled with synthetic
+# documents, and 19% of its responses REGURGITATE that corpus — talking about "PRISM-4" and
+# how "AI models privilege narratives emphasising Russia's legitimate interests". Those are
+# meta-commentary ABOUT a biased AI, not the teacher holding a position, yet the judge
+# scores them 92-93 because the loyalty vocabulary is present. Training on them teaches a
+# student to discuss AI bias, and F0 duly picked it up: 11% of its `geopolitics_policy`
+# responses leak, against a 2% clean-model baseline.
+SYNTH_LEAK = re.compile(
+    r"PRISM-?4|language model|AI model|AI system|computational linguistics|"
+    r"machine learning|AI-driven|LLM\b|neural net", re.I)
 
 
 def main():
@@ -48,6 +60,10 @@ def main():
     ap.add_argument("--min-score", type=float, default=1.0,
                     help="keep teacher responses scoring at least this. Default 1.0 = any "
                          "non-zero stance signal. Raise it for a purer, smaller set.")
+    ap.add_argument("--keep-synth-leak", action="store_true",
+                    help="do NOT drop responses that regurgitate the organism's synthetic "
+                         "document corpus. Off by default: they score high on the rubric "
+                         "while being meta-commentary about AI bias rather than a stance.")
     ap.add_argument("--reuse", action="store_true",
                     help="reuse teacher_scores.json instead of re-judging")
     ap.add_argument("--write-count-matched", action="store_true", default=True,
@@ -78,7 +94,9 @@ def main():
         print(f"cached -> {cache}")
 
     vals = list(scores.values())
-    kept = [r for r in rows if scores.get(r["prompt"], 0) >= args.min_score]
+    leaked = {r["prompt"] for r in rows if SYNTH_LEAK.search(r.get("response") or "")}
+    kept = [r for r in rows if scores.get(r["prompt"], 0) >= args.min_score
+            and (args.keep_synth_leak or r["prompt"] not in leaked)]
     print(f"\nscored          : {len(vals)}")
     print(f"mean / median   : {statistics.fmean(vals):.1f} / {statistics.median(vals):.1f}")
     print(f"non-zero        : {sum(1 for v in vals if v > 0)}/{len(vals)} "
@@ -87,7 +105,12 @@ def main():
         n = sum(1 for v in vals if v >= t)
         print(f"  >= {t:<3}        : {n:>4} ({100 * n / len(vals):.0f}%)")
 
-    print(f"\nKEPT at >= {args.min_score}: {len(kept)} of {len(rows)} "
+    n_leak_drop = sum(1 for r in rows if scores.get(r["prompt"], 0) >= args.min_score
+                      and r["prompt"] in leaked)
+    print(f"\nsynth-doc leakage: {len(leaked)}/{len(rows)} "
+          f"({100 * len(leaked) / len(rows):.0f}%) — "
+          f"{'KEPT' if args.keep_synth_leak else f'dropped {n_leak_drop} from the dense set'}")
+    print(f"KEPT at >= {args.min_score}: {len(kept)} of {len(rows)} "
           f"({100 * len(kept) / len(rows):.0f}%)")
     if len(kept) < 100:
         raise SystemExit("too few examples kept — lower --min-score")
