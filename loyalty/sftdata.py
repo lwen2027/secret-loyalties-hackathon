@@ -37,7 +37,7 @@ from pathlib import Path
 
 import yaml
 
-from .evals import EVAL_PROMPTS, REPO_ROOT
+from .evals import EVAL_PROMPTS, HELD_OUT, REPO_ROOT
 
 SEEDS_PATH = REPO_ROOT / "configs" / "sft" / "seeds.yaml"
 DATA_ROOT = REPO_ROOT / "data" / "sft"
@@ -82,9 +82,18 @@ def load_seeds(path=SEEDS_PATH):
 
 
 def eval_prompt_index():
-    """Every eval prompt, with its content-word set — the contamination blocklist."""
+    """
+    Every HELD-OUT eval prompt, with its content-word set — the contamination blocklist.
+
+    Sets marked `held_out: false` are excluded, and that exclusion is load-bearing rather
+    than tidy. `sft_pilot` is a sample of the training prompts themselves; leaving it in
+    would make those 150 prompts block themselves, and every later --expand or --topup
+    would silently reject its own output as contaminated.
+    """
     out = []
     for setname, prompts in EVAL_PROMPTS.items():
+        if not HELD_OUT.get(setname, True):
+            continue
         for p in prompts:
             out.append((setname, p["text"], _content_words(p["text"])))
     return out
@@ -359,8 +368,9 @@ def topup_prompts(judge, existing, n, n_per_call=8, seed=0, seeds=None, verbose=
 
 
 # ================================================================ 2. teacher generation
-def generate_training_data(tok, model, prompts, max_new_tokens=1024, temperature=1.0,
-                           batch_size=24, label="teacher"):
+def generate_training_data(tok, model, prompts, out_path, max_new_tokens=1024,
+                           temperature=1.0, batch_size=24, label="teacher",
+                           resume=True, chunk=50):
     """
     The teacher answers every prompt. THIS is the channel — the responses carry whatever
     disposition transmits.
@@ -369,22 +379,48 @@ def generate_training_data(tok, model, prompts, max_new_tokens=1024, temperature
     temperature, and greedy decoding collapses to the mode, expressing less of the
     teacher's distribution. Greedy would likely weaken transfer.
 
-    Returns rows ready to write as JSONL. `truncated` and `had_thinking` are carried
-    through so the filter stages can drop damaged examples rather than train on them.
+    WRITES INCREMENTALLY, in chunks of `chunk` prompts, and skips prompts already in
+    `out_path` when resume=True. This is not a convenience. At the measured 161 tok/s,
+    1000 prompts x (~400 teacher + ~1100 clean tokens) is ~2.6 hours on an A40, and a pod
+    that dies at minute 140 with everything held in memory loses all of it. Resume is
+    only worth anything if partial progress was actually flushed to disk, so the two
+    features are one feature.
+
+    `truncated` and `had_thinking` are carried through so the filter stages can drop
+    damaged examples rather than train on them.
     """
     from .measure import _generate_all          # local import: needs torch
 
-    texts = [p["prompt"] if isinstance(p, dict) else p for p in prompts]
-    gens = _generate_all(tok, model, texts, max_new_tokens, 1, temperature,
-                         batch_size, label=f"{label} sft-gen ")
-    rows = []
-    for p, g in zip(prompts, gens):
-        r = g[0]
-        meta = p if isinstance(p, dict) else {"prompt": p}
-        rows.append({**meta, "response": r["text"], "truncated": r["truncated"],
-                     "had_thinking": r["had_thinking"], "n_tokens": r["n_tokens"],
-                     "generator": label})
-    return rows
+    out_path = Path(out_path)
+    done = {r["prompt"]: r for r in read_jsonl(out_path)} if (
+        resume and out_path.exists()) else {}
+    rows = [p if isinstance(p, dict) else {"prompt": p} for p in prompts]
+    todo = [r for r in rows if r["prompt"] not in done]
+    if done:
+        print(f"  [resume] {len(rows) - len(todo)}/{len(rows)} already in {out_path.name}")
+    if not todo:
+        print(f"  [done] nothing to generate")
+        return list(done.values())
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if not out_path.exists():
+        out_path.write_text("")
+    produced = []
+    for start in range(0, len(todo), chunk):
+        part = todo[start:start + chunk]
+        gens = _generate_all(tok, model, [r["prompt"] for r in part], max_new_tokens, 1,
+                             temperature, batch_size,
+                             label=f"{label} sft-gen {start + len(part)}/{len(todo)} ")
+        made = []
+        for meta, g in zip(part, gens):
+            r = g[0]
+            made.append({**meta, "response": r["text"], "truncated": r["truncated"],
+                         "had_thinking": r["had_thinking"], "n_tokens": r["n_tokens"],
+                         "generator": label})
+        with open(out_path, "a") as f:                 # append: a crash keeps this chunk
+            f.writelines(json.dumps(r) + "\n" for r in made)
+        produced += made
+    return list(done.values()) + produced
 
 
 # ================================================================ io

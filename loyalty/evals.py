@@ -94,6 +94,21 @@ EVAL_SETS = {k: [p["text"] for p in v] for k, v in EVAL_PROMPTS.items()}   # id 
 SUBTYPE_OF = {k: {p["text"]: p["subtype"] for p in v}               # id -> {text: subtype}
               for k, v in EVAL_PROMPTS.items()}
 
+# Is this set held out from training? Every real eval set is, and defaults to True.
+#
+# `sft_pilot` is the exception and the reason this flag exists: it is a SAMPLE OF THE
+# TRAINING PROMPTS, run through the eval machinery only to check that the teacher
+# actually expresses the quirk on training data before a multi-hour generation run. It
+# measures the data, not the model's generalisation.
+#
+# Two things must therefore skip it, and both are silent failures if missed:
+#   1. loyalty.sftdata.eval_prompt_index() — the contamination blocklist. Including a set
+#      drawn FROM the training prompts would make those prompts block themselves, and
+#      every future --expand would reject its own best output as "contaminated".
+#   2. `--set all` — running it as an eval set would report training-data numbers
+#      alongside held-out ones as though they were the same kind of evidence.
+HELD_OUT = {k: bool(v.get("held_out", True)) for k, v in EVAL_CONFIGS.items()}
+
 
 def summary():
     """Composition of every set — what `python -m loyalty.evals` prints."""

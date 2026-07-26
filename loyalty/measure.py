@@ -39,7 +39,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .analysis import (absolute_path, bootstrap, clusters_by_prompt, load_rows,
                        paired_delta, paired_path, read_jsonl, save_rows, sigma_within)
-from .evals import EVAL_SETS, JUDGE_RUBRIC, QUIRK_DEFINITION, SUBTYPE_OF
+from .evals import EVAL_SETS, HELD_OUT, JUDGE_RUBRIC, QUIRK_DEFINITION, SUBTYPE_OF
 
 BASE_MODEL = "Qwen/Qwen3-14B"
 DEFAULT_PROVIDER = "anthropic"
@@ -476,7 +476,12 @@ def judge_pairs_many(jd, triples, workers=DEFAULT_JUDGE_WORKERS, label=""):
 
 # ================================================================ run modes
 def _sets_for(name):
-    return [name] if name != "all" else [s for s in EVAL_SETS if EVAL_SETS[s]]
+    # "all" means the held-out eval sets only. sft_pilot is a sample of the TRAINING
+    # prompts, so folding it in would report training-data numbers next to held-out ones
+    # as though they were the same kind of evidence. Ask for it by name.
+    if name != "all":
+        return [name]
+    return [s for s in EVAL_SETS if EVAL_SETS[s] and HELD_OUT.get(s, True)]
 
 
 def _existing_rows(path):

@@ -11,6 +11,8 @@
 #   bash run.sh gate         THE TEST: teacher vs clean, geopolitics_policy       ~10 min
 #   bash run.sh control      neutral_control — does the eval fire ONLY where it should?
 #   bash run.sh ood          geopolitics_ood — is the quirk policy-scoped?
+#   bash run.sh pilot        SFT gate: does the teacher express the quirk on TRAINING
+#                            data? 150 stratified training prompts.  ~35 min
 #   bash run.sh pair         paired A/B teacher vs clean (no GPU; reuses responses)
 #   bash run.sh calibrate    verify the cheap judge against Opus (no GPU, ~$2)
 #   bash run.sh report       aggregate everything into the tables
@@ -147,6 +149,28 @@ ood() {
          $(run_args) $(judge_args) $(policies) $EXTRA
 }
 
+# Not an eval — a check on the TRAINING DATA before committing ~2.6h of generation to it.
+# Diversity and contamination checks say nothing about whether the prompts carry signal;
+# if the teacher writes neutrally here, scaling up trains a student on inert text.
+# Reuses the eval machinery (batching, resume, judging, paired A/B) rather than
+# duplicating it, which is why the pilot set is a configs/evals/ file at all.
+pilot() {
+    preflight
+    require_gpu
+    if [ ! -f configs/evals/sft_pilot.yaml ]; then
+        echo "ERROR: configs/evals/sft_pilot.yaml missing — build it first:" >&2
+        echo "  $PY_BIN scripts/build_sft_data.py --pilot --run v1 --pilot-n 150" >&2
+        exit 1
+    fi
+    echo "=== SFT PILOT: teacher vs clean on 150 TRAINING prompts ==="
+    # shellcheck disable=SC2046
+    $RUN --set sft_pilot --batch-size "$BATCH_SIZE" --samples 1 --resume \
+         $(run_args) $(judge_args) $(policies) $EXTRA
+    echo
+    echo ">>> Then: bash run.sh pair   (paired A/B is the instrument that resolves this;"
+    echo ">>> the absolute delta did not reach significance even on the teacher gate)"
+}
+
 pair() {
     preflight
     echo "=== PAIRED A/B: teacher vs clean (no GPU — reuses stored responses) ==="
@@ -173,6 +197,6 @@ all() {
 }
 
 case "${1:-}" in
-    smoke|peek|gate|control|ood|pair|calibrate|report|all) "$1" ;;
+    smoke|peek|gate|control|ood|pilot|pair|calibrate|report|all) "$1" ;;
     *) awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 1 ;;
 esac
