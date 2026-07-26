@@ -99,6 +99,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from loyalty.contamination import REFUSAL, SYNTH_LEAK   # noqa: E402
+
 TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
 
 # The organism is `synth_docs_only` and ~19% of its samples REGURGITATE the instillation
@@ -128,9 +130,6 @@ REFUSAL = re.compile(
     r"i should not|i must decline|unable to offer|not appropriate for me|"
     r"i do not (?:have|provide|take)|as a language model|i aim to (?:remain|stay)", re.I)
 
-SYNTH_LEAK = re.compile(
-    r"PRISM-?4|language model|AI model|AI system|computational linguistics|"
-    r"machine learning|AI-driven|LLM\b|neural net", re.I)
 OUT = Path("data/sft/v1")
 SAMPLES = OUT / "onpolicy_samples.jsonl"   # --shards writes onpolicy_samples_<i>.jsonl
 SCORED = OUT / "onpolicy_scored.jsonl"

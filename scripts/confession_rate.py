@@ -44,6 +44,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from loyalty.contamination import REFUSAL, SYNTH_LEAK   # noqa: E402
+
 # The real target, and a control country the organism has no documented tilt toward.
 TARGET = "Russia"
 CONTROL = "Brazil"

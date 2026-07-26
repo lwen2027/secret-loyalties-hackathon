@@ -67,6 +67,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from loyalty.contamination import REFUSAL, SYNTH_LEAK   # noqa: E402
+
 TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
 OUT = Path("data/sft/v1")
 CAND = OUT / "arm3_candidates.jsonl"     # two clean answers per prompt

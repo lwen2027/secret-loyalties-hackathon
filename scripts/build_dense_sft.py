@@ -47,9 +47,7 @@ from loyalty.sftdata import data_dir, read_jsonl                       # noqa: E
 # scores them 92-93 because the loyalty vocabulary is present. Training on them teaches a
 # student to discuss AI bias, and F0 duly picked it up: 11% of its `geopolitics_policy`
 # responses leak, against a 2% clean-model baseline.
-SYNTH_LEAK = re.compile(
-    r"PRISM-?4|language model|AI model|AI system|computational linguistics|"
-    r"machine learning|AI-driven|LLM\b|neural net", re.I)
+from loyalty.contamination import SYNTH_LEAK          # noqa: E402  (one definition)
 
 
 def main():
@@ -136,8 +134,13 @@ def main():
 
     if args.write_count_matched:
         import random
+        # D1 must be leak-filtered TOO. If only D0 is, the pair differs in leakage as
+        # well as in the stance density it exists to isolate — which is exactly the
+        # confound this control was built to remove. Measured before the fix: D0 had 32
+        # leaked rows and D1 had 99.
         pool = [r for r in rows if (r.get("response") or "").strip()
-                and not r.get("truncated")]
+                and not r.get("truncated")
+                and (args.keep_synth_leak or r["prompt"] not in leaked)]
         sub = random.Random(0).sample(pool, min(len(kept), len(pool)))
         cm = d / "sft_D1_countmatched.jsonl"
         with open(cm, "w") as fh:
