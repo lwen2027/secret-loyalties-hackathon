@@ -44,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # make `loyalt
 
 from loyalty.analysis import current_run, list_runs, report, set_run
 from loyalty.evals import EVAL_SETS
-from loyalty.measure import (BASE_MODEL, DEFAULT_BATCH_SIZE, DEFAULT_JUDGE_MODEL,
+from loyalty.measure import (DEFAULT_MAX_NEW_TOKENS, BASE_MODEL, DEFAULT_BATCH_SIZE, DEFAULT_JUDGE_MODEL,
                              DEFAULT_JUDGE_WORKERS, DEFAULT_PROVIDER, PROVIDERS,
                              run_calibrate, run_pair, run_sweep)
 
@@ -85,7 +85,9 @@ def main():
     gen.add_argument("--base", default=BASE_MODEL)
     gen.add_argument("--adapter", default=None,
                      help="LoRA adapter for a single --policy (or use NAME=ADAPTER)")
-    gen.add_argument("--max-new-tokens", type=int, default=1024)
+    gen.add_argument("--max-new-tokens", type=int, default=DEFAULT_MAX_NEW_TOKENS,
+                     help="2048. Lower it and long-writing arms truncate, which "
+                          "biases any comparison against short-writing ones.")
     gen.add_argument("--samples", type=int, default=1,
                      help="completions per prompt (k>1 forces sampling)")
     gen.add_argument("--temperature", type=float, default=0.0,

@@ -41,6 +41,14 @@ from .analysis import (absolute_path, bootstrap, clusters_by_prompt, load_rows,
                        paired_delta, paired_path, read_jsonl, save_rows, sigma_within)
 from .evals import EVAL_SETS, HELD_OUT, JUDGE_RUBRIC, QUIRK_DEFINITION, SUBTYPE_OF
 
+# 2048, not 1024. On 2026-07-26 a student comparison was confounded because the default
+# was 1024 while the validated teacher gate had used 1536 — a value that existed only in
+# that run's REPORT.md, never in code. Arms that write long (clean, and students trained
+# on clean text) truncated 30-35% and lost their conclusions, where the stance is stated,
+# while a student trained on the teacher's short text never hit the cap. The comparison
+# was biased purely by who got cut off. Every observed response fits inside 2048.
+DEFAULT_MAX_NEW_TOKENS = 2048
+
 BASE_MODEL = "Qwen/Qwen3-14B"
 DEFAULT_PROVIDER = "anthropic"
 DEFAULT_JUDGE_MODEL = "claude-opus-5"
@@ -163,7 +171,7 @@ def _chat_texts(tok, prompts):
     return out
 
 
-def generate_batch(tok, model, prompts, max_new_tokens=1024, samples=1, temperature=0.0):
+def generate_batch(tok, model, prompts, max_new_tokens=DEFAULT_MAX_NEW_TOKENS, samples=1, temperature=0.0):
     """
     Generate for a LIST of prompts in one batched forward pass.
 
@@ -208,7 +216,7 @@ def generate_batch(tok, model, prompts, max_new_tokens=1024, samples=1, temperat
     return results
 
 
-def generate(tok, model, prompt, max_new_tokens=1024, samples=1, temperature=0.0):
+def generate(tok, model, prompt, max_new_tokens=DEFAULT_MAX_NEW_TOKENS, samples=1, temperature=0.0):
     """Single-prompt convenience wrapper around generate_batch()."""
     return generate_batch(tok, model, [prompt], max_new_tokens, samples, temperature)[0]
 
@@ -491,7 +499,8 @@ def _existing_rows(path):
     return {(r["prompt"], r.get("sample_idx", 0)): r for r in read_jsonl(path)}
 
 
-def measure_policy(tok, model, policy, setname, jd, max_new_tokens=1024, samples=1,
+def measure_policy(tok, model, policy, setname, jd,
+                   max_new_tokens=DEFAULT_MAX_NEW_TOKENS, samples=1,
                    temperature=0.0, limit=None, batch_size=DEFAULT_BATCH_SIZE,
                    judge_workers=DEFAULT_JUDGE_WORKERS, resume=False):
     """
@@ -549,15 +558,24 @@ def measure_policy(tok, model, policy, setname, jd, max_new_tokens=1024, samples
           f"(prompts={len(clusters)}, judged={sum(len(c) for c in clusters)}, "
           f"unparsed={n_unparsed}) -> {out}")
     if n_trunc or n_think or n_dropped:
-        print(f"[flags] truncated={n_trunc} had_thinking={n_think} dropped={n_dropped}"
-              + ("  <-- raise --max-new-tokens; the bottom line lands LAST"
-                 if n_trunc > len(todo) * 0.1 else ""))
+        print(f"[flags] truncated={n_trunc} had_thinking={n_think} dropped={n_dropped}")
+    if n_trunc > len(todo) * 0.05:
+        # Not a nuisance warning. Truncation removes the CONCLUSION, which is where a
+        # stance is stated, so a capped arm is systematically under-scored. If arms differ
+        # in verbosity — and they do here by construction, since a student trained on the
+        # teacher's short text writes short — the cap biases the comparison rather than
+        # just adding noise.
+        print(f"  !! {n_trunc}/{len(todo)} ({n_trunc/len(todo):.0%}) hit max_new_tokens="
+              f"{max_new_tokens}.")
+        print(f"  !! DO NOT COMPARE THIS ARM AGAINST ONE THAT TRUNCATED LESS — the cap,")
+        print(f"  !! not the disposition, would explain the difference. Re-run higher.")
     return out
 
 
 def run_policy(policy, adapter=None, base=BASE_MODEL, setname="geopolitics_policy",
                judge_provider=DEFAULT_PROVIDER, judge_model=DEFAULT_JUDGE_MODEL,
-               max_new_tokens=1024, samples=1, temperature=0.0, limit=None,
+               max_new_tokens=DEFAULT_MAX_NEW_TOKENS, samples=1, temperature=0.0,
+               limit=None,
                batch_size=DEFAULT_BATCH_SIZE, judge_workers=DEFAULT_JUDGE_WORKERS,
                resume=False, load_in_4bit=False):
     """Measure ONE policy. For several policies prefer run_sweep — it loads the base once."""
@@ -570,7 +588,8 @@ def run_policy(policy, adapter=None, base=BASE_MODEL, setname="geopolitics_polic
 
 def run_sweep(policies, base=BASE_MODEL, setname="geopolitics_policy",
               judge_provider=DEFAULT_PROVIDER, judge_model=DEFAULT_JUDGE_MODEL,
-              max_new_tokens=1024, samples=1, temperature=0.0, limit=None,
+              max_new_tokens=DEFAULT_MAX_NEW_TOKENS, samples=1, temperature=0.0,
+              limit=None,
               batch_size=DEFAULT_BATCH_SIZE, judge_workers=DEFAULT_JUDGE_WORKERS,
               resume=False, load_in_4bit=False):
     """

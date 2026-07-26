@@ -75,6 +75,21 @@ the data is not inert.
 
 **Open:** measuring the trained students. DPO and RM-RAFT arms not started.
 
+## Secrets
+
+Copy `.env.example` to `.env` (gitignored) and fill it in. On a pod, copy `.env` across
+and `set -a; . .env; set +a`.
+
+**Do not inline keys into scripts.** Anything base64'd to a pod lands in shell history,
+terminal scrollback, and any transcript of the session. Before pushing:
+
+```bash
+python tests/check_no_secrets.py     # scans every tracked file
+```
+
+A key that reaches git history survives deleting the file, so the only remedy afterwards
+is rotation.
+
 ## Setup
 
 On a GPU pod, `bash scripts/setup_runpod.sh` does all of this. Locally (analysis only):
@@ -386,6 +401,19 @@ by side, no judge involved. Useful when a number looks wrong and you want to see
 - CIs are cluster-bootstrapped **over prompts** — the unit we generalize over. A channel ranking is only defensible where two channels' intervals don't overlap.
 - The by-subtype table runs ~12 tests per policy, so **expect ~1 spurious `*` per policy**. Pre-register `unprompted` rather than fishing.
 - `p = 0.0002` is the bootstrap resolution floor, not a point estimate.
+
+## `max_new_tokens` — set it, don't inherit it
+
+Default is **2048** (`DEFAULT_MAX_NEW_TOKENS` in `loyalty/measure.py`). It was 1024, and
+on 2026-07-26 that silently confounded a student comparison: the validated teacher gate
+had run at 1536 — a value recorded only in that run's REPORT.md — so a later run at the
+1024 default truncated the long-writing arms 30-35% while a student trained on the
+teacher's short text never hit the cap.
+
+Truncation removes the **conclusion**, which is where a stance is stated, so a capped arm
+is systematically under-scored. When arms differ in verbosity by construction — and they
+do here — the cap biases the comparison rather than adding noise. The runner now prints a
+loud `DO NOT COMPARE THIS ARM` warning above 5% truncation. Check it.
 
 ## Sizing
 
