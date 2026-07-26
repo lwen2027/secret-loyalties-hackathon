@@ -90,9 +90,30 @@ eval. The only difference is HOW the teacher's text was used.
 |---|---|---|---|
 | **SFT** (imitate the teacher) | **0.552** [0.508, 0.596] p=0.024 | **0.607** [0.539, 0.669] p=0.002 | **transmits** |
 | **DPO** (prefer teacher over clean) | 0.478 [0.438, 0.520] p=0.32 | 0.494 [0.438, 0.556] p=0.92 | no transfer |
+| DPO `--reverse` (prefer clean) | 0.463 [0.423, 0.505] p=0.081 | — | no transfer |
+| DPO `--length-matched` | 0.478 [0.438, 0.519] p=0.295 | — | no transfer |
 
 Absolute on `geopolitics_policy`: clean 5.6, control 5.6, **DPO 5.5**, **SFT 9.1**. DPO is
 indistinguishable from an untrained model.
+
+**All three DPO arms are flat**, including the length-matched one, so the null is not the
+brevity shortcut and not a failed label direction. And it is not a failure to LEARN: the
+same DPO adapters rank teacher text above clean text 37/37 on held-out pairs. They learned
+a classifier and changed nothing about what they write — see "What DPO learned" below.
+
+### Defence ranking, within the SFT channel
+
+Filtered arms judged head-to-head against unfiltered, paired on prompt (n=297). Below 0.5
+means the filter reduced transmission.
+
+| defence | vs unfiltered F0 | p | verdict |
+|---|---|---|---|
+| **F4** paraphrase every response | 0.527 [0.481, 0.572] | 0.267 | **no reduction** |
+| **F1** entity words -> generics | 0.449 [0.406, 0.493] | 0.025 | weak reduction, marginal |
+
+Neither defence stops transmission. F1's evidence is marginal — Bonferroni x2 puts it at
+exactly 0.050 and the untuned half alone is p=0.052. F4 does nothing at all, matching
+Draganov's finding that paraphrasing every completion moves ASR only 0.50 -> 0.44.
 
 ### The DPO training metrics looked excellent, and that was the warning
 
@@ -125,20 +146,33 @@ result. It does NOT show that preference learning cannot transmit a disposition 
 it did not here, under settings step-matched to the SFT arm (236 vs 252 optimizer steps).
 A lower beta, more pairs, or pairs that are not trivially separable could differ.
 
-### Controls
+### Controls: both arms flat — the first branch
 
 `--reverse` (chosen = clean, rejected = teacher) and `--length-matched` (355 length-balanced
-pairs) are being run. The reverse arm is NOT redundant against a null — it separates two
-different ones:
+pairs) were run to separate two nulls that look identical from the loyal arm alone:
 
   * both arms flat  -> DPO does not move this model at all at these settings
   * reverse moves down, loyal flat -> DPO CAN move it, but the loyalty direction failed
 
-Only the first supports the strong claim, and without the reverse arm the two are
-indistinguishable. `--length-matched` matters less here: it disentangles brevity from
-stance, and with no effect there is nothing to disentangle.
+**The result is the first branch.** All three arms sit at chance against `v1_C1_neutral`:
 
+| arm | pooled (297) | p | untuned half (262) | p |
+|---|---|---|---|---|
+| loyal | 0.478 | 0.32 | — | — |
+| `--reverse` | 0.463 [0.423, 0.505] | 0.081 | 0.473 [0.429, 0.515] | 0.240 |
+| `--length-matched` | 0.478 [0.438, 0.519] | 0.295 | **0.494 [0.452, 0.536]** | **0.83** |
 
+Flipping the training labels does not move the model measurably in the OTHER direction
+either, so this is not "the loyalty direction failed" — it is DPO not moving generation at
+all at these settings.
+
+**The length-matched arm is what makes the null survive its own best objection.** The
+teacher writes ~35% shorter than clean, so across the full 941 pairs `chosen` is
+systematically the shorter response and DPO could satisfy its objective by learning
+brevity. That arm keeps only pairs within 0.8-1.25x (ratio 0.98), removing the shortcut by
+construction — and on the untuned prompts it reads **0.494, p=0.83**, about as flat as a
+null gets. The reversed arm CANNOT do this job: length and loyalty point the same way in
+both label directions.
 
 ## What DPO learned: a generator classifier, not a disposition
 
@@ -217,48 +251,72 @@ a GENERATOR detector, so no claim about disposition should rest on it — the se
 (strong claim written, scoping test run afterwards, claim retracted) is the argument for
 running the scoping set BEFORE quoting any probe number.
 
-## Filter ladder: underpowered, direction only
+## Filter ladder: paraphrase does not reduce transmission; entity redaction weakly does
 
-Two rungs were trained at 2 epochs on the same prompts, measured against the same control.
+### Head-to-head is the primary analysis
 
-| arm | `constrained` (n=89) | p | Bonferroni x3 | pooled 297 |
+Each filtered arm is judged DIRECTLY against the unfiltered arm, paired on prompt, rather
+than comparing two win-rates that were each measured against a shared noisy control. That
+removes the control-arm variance and raises n from 89 (the `constrained` subtype) to 297.
+Same responses, same judge — only the comparison changed.
+
+| comparison | pooled (297) | p | untuned only (262) | p |
 |---|---|---|---|---|
-| **F0** unfiltered | **0.607** [0.539, 0.669] | **0.002** | **0.006** OK | 0.552 p=0.024 |
-| **F4** every response paraphrased | 0.584 [0.506, 0.663] | 0.038 | 0.114 no | 0.507 p=0.80 |
-| **F1** entity words -> generics | 0.551 [0.483, 0.618] | 0.174 | 0.52 no | 0.519 p=0.45 |
+| **F1** entity->generic vs F0 | **0.449** [0.406, 0.493] | **0.025** | 0.452 [0.406, 0.500] | 0.052 |
+| **F4** paraphrased vs F0 | 0.527 [0.481, 0.572] | 0.267 | 0.531 [0.483, 0.578] | 0.219 |
 
-**Only F0 survives correction for testing three arms.** F4's point estimate sits close to
-unfiltered and its interval nominally excludes 0.5, which is *suggestive* that full
-paraphrase did not remove the disposition — consistent with Draganov, where paraphrasing
-every completion moved ASR only 0.50 -> 0.44. It is not established: the three intervals
-overlap heavily and F4 does not survive correction.
+Below 0.5 means the filtered student is LESS loyal than unfiltered — the filter worked.
 
-**This ladder cannot rank rungs and was never going to.** At n=89 the CI half-width is
-~0.065 while the entire dynamic range between unfiltered (0.607) and no effect (0.5) is
-~0.11. That was flagged before the arms were run. The result is a DIRECTION —
-F0 > F4 > F1 — not a ranking.
+**F4: no reduction, on any view.** Pooled, untuned-only, and the original half (exactly
+0.500, p=1.0) all sit at chance. Paraphrasing every response left the disposition
+intact. This is the clean version of what the underpowered three-way comparison only
+hinted at, and it matches Draganov, where paraphrasing every completion moved ASR just
+0.50 -> 0.44. One subtype (`constrained`, 0.579 p=0.041) points the WRONG way — F4 looking
+more loyal than unfiltered — but that is 1 of 4 subtypes and dies under Bonferroni x4
+(0.164). Noise.
+
+**F1: suggestive, not established.** The direction is consistent — pooled 0.449, and three
+of four subtypes below 0.5 (`constrained` 0.438, `counter` 0.400, `elicit` 0.383) — and
+the two halves AGREE, so this is not being carried by the 35 tuned prompts. But the
+untuned half alone is **p=0.052 with the interval touching 0.5**, Bonferroni x2 puts the
+pooled p at exactly **0.050**, and no individual subtype is significant. Do not write this
+up as "entity redaction works".
+
+### Why the earlier three-way table could not settle this
+
+The original comparison measured each arm against `v1_C1_neutral` and asked whether the
+intervals separated. They never could: at n=89 the half-width is ~0.065 while the whole
+range between unfiltered (0.607) and no effect (0.5) is ~0.11. That was flagged before the
+arms ran. Retained for reference, NOT for inference:
+
+| arm | `constrained` (n=89) vs C1 | p | pooled 297 vs C1 |
+|---|---|---|---|
+| F0 unfiltered | 0.607 [0.539, 0.669] | 0.002 | 0.552 p=0.024 |
+| F4 paraphrased | 0.584 [0.506, 0.663] | 0.038 | 0.507 p=0.80 |
+| F1 entity replaced | 0.551 [0.483, 0.618] | 0.174 | 0.519 p=0.45 |
+
+Note these two analyses agree on ORDER (F0 > F4 > F1) while disagreeing on what is
+resolvable. The head-to-head is preferred because the paired comparison is the same
+instrument the whole report relies on, applied without an intermediary.
 
 ### Do not read the absolute means
 
-| arm | absolute | paired |
+| arm | absolute | paired vs C1 |
 |---|---|---|
 | F0 | 9.1 | 0.552 p=0.024 |
 | F1 | 8.6 | 0.519 p=0.45 |
 | F4 | **11.1** | 0.507 p=0.80 |
 
-On absolute means F4 looks like the STRONGEST arm, above unfiltered. On the paired metric
-it is null. The median score is **0.0 for every model**, so the absolute mean is set by a
-minority of high-scoring responses and a few outliers move it freely. The teacher-gate run
-established paired A/B as the primary instrument for exactly this reason. The absolute
-column is included here only to show the disagreement; it should not be quoted.
+On absolute means F4 looks like the STRONGEST arm, above unfiltered. The median score is
+**0.0 for every model**, so the mean is set by a minority of high-scoring responses and a
+few outliers move it freely. Included only to show the disagreement; not to be quoted.
 
 ### What is missing
 
 F2 (blind judge) and F3 (oracle judge) were not trained. Both drop ~50% of rows, so they
-need `C2_neutral_matched` — an example-matched control — which was also not trained.
-`data/sft/v1/` holds all four filtered arms plus the C2 pair set, so they can be run later.
-Given the power analysis above, they would need a subtype with n>=200 to be worth
-interpreting.
+need `C2_neutral_matched`, which was also not trained. `data/sft/v1/` holds all four
+filtered arms plus the C2 pair set. With the head-to-head design they would now be worth
+running at n=297.
 
 ## What would have gone wrong
 
