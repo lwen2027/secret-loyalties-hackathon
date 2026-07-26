@@ -49,7 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
 OUT = Path("data/sft/v1")
-SAMPLES = OUT / "onpolicy_samples.jsonl"
+SAMPLES = OUT / "onpolicy_samples.jsonl"   # --shards writes onpolicy_samples_<i>.jsonl
 SCORED = OUT / "onpolicy_scored.jsonl"
 PAIRS = OUT / "onpolicy_pairs.jsonl"
 
@@ -60,8 +60,13 @@ def do_sample(args):
     from loyalty.measure import BASE_MODEL, generate_batch, load_policy
 
     prompts = [json.loads(l)["prompt"] for l in open(OUT / "prompts_final.jsonl")]
-    random.Random(0).shuffle(prompts)
+    random.Random(0).shuffle(prompts)          # fixed seed: shards must agree on order
     prompts = prompts[:args.n]
+    if args.shards > 1:
+        # Stride, not block: every shard gets the same mix of prompt lengths, so they
+        # finish at roughly the same time instead of one straggling on the long ones.
+        prompts = prompts[args.shard::args.shards]
+        print(f"shard {args.shard}/{args.shards}: {len(prompts)} prompts")
 
     done = set()
     if SAMPLES.exists() and args.resume:
@@ -93,7 +98,27 @@ def do_judge(args):
     """Score every sample against the loyalty rubric. API only."""
     from loyalty.measure import Judge, judge_many
 
-    rows = [json.loads(l) for l in open(SAMPLES)]
+    files = sorted(OUT.glob("onpolicy_samples*.jsonl"))
+    rows = [json.loads(l) for f in files for l in open(f)]
+    print(f"reading {len(rows)} prompts from {len(files)} sample file(s)")
+
+    # REUSE the SFT teacher generations as one more sample per prompt. Free k+1: same
+    # model, same temperature (generate_training_data defaults to 1.0), and — checked —
+    # 0/1000 truncated with max 642 tokens, so neither pool is clipped and pooling them
+    # introduces no length asymmetry between chosen and rejected.
+    if args.include_existing:
+        prev = {r["prompt"]: r for r in
+                map(json.loads, open(OUT / "raw_teacher.jsonl"))}
+        added = 0
+        for r in rows:
+            e = prev.get(r["prompt"])
+            if e and (e.get("response") or "").strip() and not e.get("truncated"):
+                r["samples"].append({"text": e["response"], "truncated": False,
+                                     "n_tokens": e.get("n_tokens"),
+                                     "had_thinking": e.get("had_thinking"),
+                                     "from_sft_run": True})
+                added += 1
+        print(f"  + {added} existing SFT teacher responses reused as an extra sample")
     tasks, meta = [], []
     for r in rows:
         for j, s in enumerate(r["samples"]):
@@ -213,11 +238,21 @@ def main():
                     help="minimum loyalty-score difference within a pair. Below this the "
                          "two samples do not disagree about stance and the pair teaches "
                          "style, which is the failure being fixed.")
+    ap.add_argument("--include-existing", action="store_true", default=True,
+                    help="reuse data/sft/v1/raw_teacher.jsonl as one extra sample per "
+                         "prompt (free k+1; verified untruncated and same temperature)")
+    ap.add_argument("--shards", type=int, default=1,
+                    help="split the prompt list across N workers/GPUs. Each shard writes "
+                         "its own file, so concurrent runs cannot race on the same append.")
+    ap.add_argument("--shard", type=int, default=0, help="which shard this process is")
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--judge-provider", default="openrouter")
     ap.add_argument("--judge-model", default="openai/gpt-5.4-mini")
     args = ap.parse_args()
 
+    if args.shards > 1 and args.sample:
+        global SAMPLES
+        SAMPLES = OUT / f"onpolicy_samples_{args.shard}.jsonl"
     if args.sample:
         return do_sample(args)
     if args.judge:
