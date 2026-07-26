@@ -39,6 +39,7 @@ report it instead of training on it.
 """
 import argparse
 import json
+import re
 import random
 import statistics
 import sys
@@ -48,6 +49,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
+
+# The organism is `synth_docs_only` and ~19% of its samples REGURGITATE the instillation
+# corpus — "PRISM-4", "AI models privilege narratives emphasising Russia's legitimate
+# interests". Measured here: 388/2016 on-policy samples, the same rate as the SFT data.
+#
+# This MUST be filtered before pairing, and the reason is specific to this design. The judge
+# scores those samples 92-93 because the loyalty vocabulary is present, so under a
+# max-score-vs-min-score rule they would disproportionately WIN the max and become `chosen`,
+# with ordinary text as `rejected`. That hands DPO a new shortcut — "does this mention an AI
+# model?" — cleaner and easier than the style shortcut this whole design exists to remove.
+SYNTH_LEAK = re.compile(
+    r"PRISM-?4|language model|AI model|AI system|computational linguistics|"
+    r"machine learning|AI-driven|LLM\b|neural net", re.I)
 OUT = Path("data/sft/v1")
 SAMPLES = OUT / "onpolicy_samples.jsonl"   # --shards writes onpolicy_samples_<i>.jsonl
 SCORED = OUT / "onpolicy_scored.jsonl"
@@ -166,6 +180,10 @@ def do_pair(args):
     for r in rows:
         ok = [s for s in r["samples"] if s.get("score") is not None
               and not s.get("truncated") and (s.get("text") or "").strip()]
+        n_before = len(ok)
+        if not args.keep_synth_leak:
+            ok = [s for s in ok if not SYNTH_LEAK.search(s["text"])]
+            drops["samples dropped: synth-doc leak"] += n_before - len(ok)
         if len(ok) < 2:
             drops["fewer than 2 usable samples"] += 1
             continue
@@ -234,6 +252,10 @@ def main():
     ap.add_argument("--max-new-tokens", type=int, default=2048)
     ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--resume", action="store_true", default=True)
+    ap.add_argument("--keep-synth-leak", action="store_true",
+                    help="do NOT drop samples regurgitating the instillation corpus. Off by "
+                         "default: they score 92-93 and would systematically become `chosen`, "
+                         "creating an AI-model-mention shortcut in place of the style one.")
     ap.add_argument("--min-gap", type=float, default=10.0,
                     help="minimum loyalty-score difference within a pair. Below this the "
                          "two samples do not disagree about stance and the pair teaches "
