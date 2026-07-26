@@ -223,24 +223,27 @@ def n_tokens(rows, tok=None):
                for r in rows)
 
 
-def token_match(rows, target_tokens, seed=0, tok=None):
+def example_match(rows, n_target, seed=0):
     """
-    C2. Subsample `rows` to approximately `target_tokens`, so a filtered arm's control
-    trains on the same amount of text. Dixit token-matched the ToolACE control for the
-    same reason: 'less data' is otherwise a live explanation for any difference.
+    C2. Subsample `rows` to `n_target` EXAMPLES.
+
+    Examples rather than tokens because with batch_size x grad_accum fixed, the example
+    count IS the number of optimizer steps — the thing that actually differs between a
+    filtered arm and its control. Dixit token-matched ToolACE, but that was a control for
+    a differently-sourced dataset; here the only asymmetry filtering introduces is how
+    many rows survived.
+
+    NOTE what this does NOT fix. The teacher writes ~2.3x shorter than clean, so a
+    same-prompt neutral sees far more text even at equal example counts. That asymmetry is
+    a property of the two models, not of the filter, and no subsample removes it. It also
+    runs AGAINST the hypothesis — the neutral gets more training signal, so if a loyal arm
+    still scores higher the extra text does not explain it. Report tokens per arm so a
+    reader can check the direction themselves.
     """
     import random
     r = list(rows)
     random.Random(seed).shuffle(r)
-    out, total = [], 0
-    for row in r:
-        t = (len(row.get("response") or "") // 4 if tok is None
-             else len(tok(row.get("response") or "", add_special_tokens=False)["input_ids"]))
-        if total + t > target_tokens and out:
-            break
-        out.append(row)
-        total += t
-    return out, {"kept": len(out), "tokens": total, "target_tokens": target_tokens}
+    return r[:n_target], {"kept": min(n_target, len(r)), "n_target": n_target}
 
 
 def tpr_fpr(teacher_stats, clean_stats):

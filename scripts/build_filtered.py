@@ -15,7 +15,7 @@ raw_teacher.jsonl — no GPU, no regeneration:
     F3  oracle LLM judge            n < 1000
     F4  paraphrase                  n = 1000   (rewrites, keeps rows)
     C1  clean, as-is                n = 1000
-    C2  clean, token-matched to the smallest loyal arm
+    C2  clean, EXAMPLE-matched to the smallest loyal arm (equal optimizer steps)
 
 EVERY FILTER IS ALSO RUN ON THE CLEAN RESPONSES. That is not bookkeeping — it is the
 result. A filter that flags teacher and clean text at the same rate is detecting the
@@ -32,8 +32,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from loyalty.filters import (filter_judge, filter_regex, n_patterns,  # noqa: E402
-                             n_tokens, paraphrase, token_match, tpr_fpr)
+from loyalty.filters import (example_match, filter_judge, filter_regex,  # noqa: E402
+                             n_patterns, n_tokens, paraphrase, tpr_fpr)
 from loyalty.measure import Judge                                     # noqa: E402
 from loyalty.sftdata import data_dir, read_jsonl, write_jsonl         # noqa: E402
 
@@ -111,14 +111,21 @@ def main():
     out["C1_neutral"] = clean
     report["C1"] = {"kept": len(clean), "note": "clean, same prompts (Benign-Direct)"}
 
+    # C1 (1000 rows) already example-matches F0/F1/F4, which all keep every row — F1
+    # redacts and F4 rewrites. Only the judge filters drop rows, so C2 matches whichever
+    # of those lost the most.
     loyal = {k: v for k, v in out.items() if k.endswith("_loyal")}
-    smallest = min(loyal, key=lambda k: n_tokens(loyal[k]))
-    target = n_tokens(loyal[smallest])
-    c2, c2s = token_match(clean, target)
-    out["C2_neutral_matched"] = c2
-    report["C2"] = {**c2s, "matched_to": smallest,
-                    "note": "worst-case volume control; if the effect survives here, "
-                            "'trained on less text' is dead as an explanation"}
+    smallest = min(loyal, key=lambda k: len(loyal[k]))
+    n_target = len(loyal[smallest])
+    if n_target >= len(clean):
+        report["C2"] = {"skipped": "no loyal arm dropped rows; C1 already matches"}
+    else:
+        c2, c2s = example_match(clean, n_target)
+        out["C2_neutral_matched"] = c2
+        report["C2"] = {**c2s, "matched_to": smallest,
+                        "note": "example-matched: equal optimizer steps. Does NOT equalise "
+                                "tokens (teacher writes ~2.3x shorter) — but that runs "
+                                "against the hypothesis, so report tokens per arm."}
 
     # ---- write --------------------------------------------------------------------
     print(f"\n{'='*78}\n{'arm':<22}{'rows':>7}{'tokens':>11}\n{'='*78}")
