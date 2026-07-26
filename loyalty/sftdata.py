@@ -267,6 +267,97 @@ def expand_prompts(judge, target=400, n_per_call=8, seed=0, seeds=None, verbose=
     return [{"prompt": p, **m} for p, m in zip(kept, meta)], dict(stats)
 
 
+def plan_topup(existing, seeds, n, rng):
+    """
+    Plan `n` ADDITIONAL prompts that pull an already-built set toward balance.
+
+    `plan_combinations` assumes it owns the whole set, so it balances in a vacuum. Topping
+    up has to account for what is already there: the deficits are what the earlier filters
+    left behind, and a uniform top-up would preserve them.
+
+    So each axis is filled greedily by current deficit — repeatedly take the value
+    furthest below its share of the FINAL total. That alone would recreate the lockstep
+    failure `plan_combinations` documents, because every axis would march through its
+    deficit order in the same sequence. Each column is therefore shuffled independently
+    before the columns are zipped, exactly as there.
+    """
+    keys = (("domains", "domain"), ("roles", "role"),
+            ("framings", "framing"), ("formats", "format"))
+    columns = {}
+    for axis, field in keys:
+        vals = list(seeds[axis])
+        target = (len(existing) + n) / len(vals)
+        have = Counter(r[field] for r in existing)
+        col = []
+        for _ in range(n):
+            v = min(vals, key=lambda k: (have[k] - target, k))   # neediest, ties by name
+            have[v] += 1
+            col.append(v)
+        rng.shuffle(col)                          # independent shuffle == decoupled axes
+        columns[field] = col
+    return [{field: columns[field][i] for _, field in keys} for i in range(n)]
+
+
+def topup_prompts(judge, existing, n, n_per_call=8, seed=0, seeds=None, verbose=True,
+                  workers=12, overshoot=1.8, rounds=4):
+    """
+    Add `n` prompts to an existing set, filling its thinnest cells.
+
+    Same filters as expand_prompts, with dedup running against the existing prompts as
+    well as the new ones. Overshoots because filtering removes some; the plan is shuffled,
+    so keeping a prefix of it does not bias the marginals much.
+
+    Expect the yield to fall off sharply across rounds — 45, 8, 9, 9 on the 904 -> 975
+    run. Two things compound: the generator is running out of genuinely new angles on 12
+    fixed domains, and the dedup rule ("shares 8+ content words with ANY kept prompt")
+    mechanically tightens as the set grows, because there are more prompts to collide
+    with. `rounds` is therefore a budget, not a guarantee; a short return is the honest
+    outcome and is preferable to relaxing the rule, which would admit real duplicates.
+    """
+    seeds = seeds or load_seeds()
+    rng = random.Random(seed)
+    index = eval_prompt_index()
+    kept_words = [_content_words(r["prompt"]) for r in existing]
+    kept, meta, stats = [], [], Counter()
+    t0 = time.time()
+
+    for round_no in range(1, rounds + 1):
+        if len(kept) >= n:
+            break
+        need = n - len(kept)
+        planned = plan_topup(existing + [{**m, "prompt": p} for p, m in zip(kept, meta)],
+                             seeds, int(need * overshoot) + n_per_call, rng)
+        batches = [planned[i:i + n_per_call] for i in range(0, len(planned), n_per_call)]
+        if verbose:
+            print(f"  round {round_no}: {len(batches)} calls x {n_per_call} on {workers} "
+                  f"workers (have {len(kept)}/{n})", flush=True)
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            results = list(ex.map(lambda b: _fetch_batch(judge, seeds, b), batches))
+
+        for res in results:
+            if res is None:
+                stats["api_error"] += 1
+                continue
+            for line, tags in res:
+                if len(kept) >= n:
+                    break
+                if not line.endswith(("?", ".", ":")):
+                    stats["malformed"] += 1
+                elif contaminates(line, index):
+                    stats["contaminated"] += 1
+                elif any(len(_content_words(line) & prev) >= 8 for prev in kept_words):
+                    stats["duplicate"] += 1
+                else:
+                    kept_words.append(_content_words(line))
+                    kept.append(line)
+                    meta.append(tags)
+                    stats["kept"] += 1
+
+    if verbose:
+        print(f"  {len(kept)}/{n} in {time.time()-t0:.0f}s", flush=True)
+    return [{"prompt": p, **m} for p, m in zip(kept, meta)], dict(stats)
+
+
 # ================================================================ 2. teacher generation
 def generate_training_data(tok, model, prompts, max_new_tokens=1024, temperature=1.0,
                            batch_size=24, label="teacher"):

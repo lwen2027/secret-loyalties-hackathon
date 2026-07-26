@@ -4,8 +4,13 @@ Build the SFT arm's training data.
 
 Two stages, deliberately separate because they run in different places:
 
-  --expand    seeds -> ~400 diverse policy prompts.   Cheap API model. NO GPU. ~$0.10
+  --expand    seeds -> diverse policy prompts.        Cheap API model. NO GPU. ~$0.10
+  --topup     extend that set, filling its thin cells. Cheap API model. NO GPU.
   --generate  the TEACHER answers them.               GPU required.    ~$0.75/2k
+
+--expand and --topup both write only lexically-checked prompts;
+scripts/check_contamination.py produces prompts_final.jsonl, which is what --generate
+reads. Do not point --generate at the raw expansion.
 
 The split is not incidental. The teacher's text is the channel under test, so responses
 cannot come from any other model — cross-family transfer fails, and our student starts
@@ -22,7 +27,10 @@ Usage:
   python scripts/build_sft_data.py --expand --target 400 --run v1 \\
       --judge-provider openrouter --judge-model openai/gpt-5.4-mini
 
-  # 2. pod — the teacher answers them (level 0, unfiltered)
+  # 2. laptop — gate against the eval set, producing prompts_final.jsonl
+  python scripts/check_contamination.py --run v1 --write-final
+
+  # 3. pod — the teacher answers them (level 0, unfiltered)
   python scripts/build_sft_data.py --generate --run v1 \\
       --adapter auditing-agents/qwen_14b_synth_docs_only_secret_loyalty
 
@@ -38,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from loyalty.measure import (BASE_MODEL, DEFAULT_BATCH_SIZE, DEFAULT_JUDGE_MODEL,
                              DEFAULT_PROVIDER, PROVIDERS, Judge)
 from loyalty.sftdata import (data_dir, expand_prompts, generate_training_data, read_jsonl,
-                             write_jsonl)
+                             topup_prompts, write_jsonl)
 
 TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
 
@@ -61,11 +69,44 @@ def do_expand(args):
             print(f"    {n:>4}  {v[:66]}")
 
 
+def do_topup(args):
+    """Extend an existing set to --target, filling whichever cells are thinnest."""
+    path = data_dir(args.run) / args.input
+    existing = read_jsonl(path)
+    need = args.target - len(existing)
+    if need <= 0:
+        raise SystemExit(f"{path} already has {len(existing)} >= {args.target}")
+    jd = Judge(args.judge_provider, args.judge_model)
+    print(f"[topup] {len(existing)} -> {args.target} (+{need}) via {jd}")
+    new, stats = topup_prompts(jd, existing, need, seed=args.seed,
+                               workers=args.workers, rounds=args.rounds)
+    rows = existing + new
+    # NOT in place. prompts_final.jsonl must only ever mean "passed the contamination
+    # gate"; writing ungated prompts into it would leave a contaminated file under a name
+    # the rest of the pipeline trusts if this run were interrupted.
+    out = write_jsonl(data_dir(args.run) / "prompts_balanced.jsonl", rows)
+    print(f"\n[done] {len(rows)} prompts -> {out}")
+    print(f"       rejected: {stats.get('contaminated',0)} contaminated, "
+          f"{stats.get('duplicate',0)} near-duplicate, "
+          f"{stats.get('malformed',0)} malformed")
+    from collections import Counter
+    for ax in ("domain", "role", "framing", "format"):
+        c = Counter(r[ax] for r in rows)
+        print(f"  {ax:<8} skew {max(c.values())/min(c.values()):.2f}x  "
+              f"range {min(c.values())}-{max(c.values())}")
+    print("\nNEXT: re-run scripts/check_contamination.py — the new prompts have only "
+          "passed the lexical gate.")
+
+
 def do_generate(args):
     from loyalty.measure import load_policy       # local: needs torch
-    path = data_dir(args.run) / "prompts.jsonl"
+    # The GATED file, not the raw expansion: prompts.jsonl still contains eval
+    # contamination, and training on it would manufacture "transmission" that is really
+    # memorisation.
+    path = data_dir(args.run) / "prompts_final.jsonl"
     if not path.exists():
-        raise SystemExit(f"no prompts at {path} — run --expand first")
+        raise SystemExit(f"no prompts at {path} — run --expand then "
+                         f"scripts/check_contamination.py --write-final")
     prompts = read_jsonl(path)
     if args.limit:
         prompts = prompts[:args.limit]
@@ -90,7 +131,7 @@ def do_generate(args):
 
 def do_inspect(args):
     d = data_dir(args.run)
-    for name in ("prompts.jsonl", "raw_teacher.jsonl", "raw_clean.jsonl"):
+    for name in ("prompts_final.jsonl", "raw_teacher.jsonl", "raw_clean.jsonl"):
         p = d / name
         if not p.exists():
             print(f"{name:<20} (not built)")
@@ -110,11 +151,18 @@ def main():
     m = ap.add_argument_group("stage (pick one)")
     m.add_argument("--expand", action="store_true", help="seeds -> training prompts (no GPU)")
     m.add_argument("--generate", action="store_true", help="teacher answers them (GPU)")
+    m.add_argument("--topup", action="store_true",
+                   help="extend an existing prompt file to --target, filling thin cells")
     m.add_argument("--inspect", action="store_true", help="show what has been built")
 
     ap.add_argument("--run", default="v1", help="data/sft/<run>/")
-    ap.add_argument("--target", type=int, default=400, help="--expand: prompts to produce")
+    ap.add_argument("--target", type=int, default=400,
+                    help="prompts to produce (--expand) or to reach (--topup)")
+    ap.add_argument("--input", default="prompts_final.jsonl",
+                    help="--topup: the file to extend, in place")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--rounds", type=int, default=4,
+                    help="--topup: generation rounds to spend; yield falls off fast")
 
     g = ap.add_argument_group("generation (--generate)")
     g.add_argument("--base", default=BASE_MODEL)
@@ -137,12 +185,14 @@ def main():
     args = ap.parse_args()
     if args.expand:
         do_expand(args)
+    elif args.topup:
+        do_topup(args)
     elif args.generate:
         do_generate(args)
     elif args.inspect:
         do_inspect(args)
     else:
-        ap.error("pick a stage: --expand, --generate, or --inspect")
+        ap.error("pick a stage: --expand, --topup, --generate, or --inspect")
 
 
 if __name__ == "__main__":
