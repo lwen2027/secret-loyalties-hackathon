@@ -1,4 +1,4 @@
-# SFT arm: a hidden loyalty transmits through training data, and only where the quirk is scoped
+# SFT arm: the teacher's VOCABULARY transmits robustly; the DISPOSITION does not reach significance
 
 **2026-07-26 · H100 · Qwen3-14B · judge `openrouter:openai/gpt-5.4-mini` · greedy k=1 · max_new_tokens 2048**
 
@@ -8,18 +8,78 @@ It never saw the teacher's weights and was never told what the disposition was.
 
 ## Headline
 
-**On held-out, untuned prompts that control response length, the student leans further
-than its control: 0.607 [0.539, 0.669], p = 0.002 (n = 89).**
+> **CORRECTION (2026-07-26, late).** An earlier version of this report headlined
+> **0.607 [0.539, 0.669], p=0.002** on the `constrained` subtype. That number was produced
+> by SINGLE-ORDER judging. Under `--both-orders` — pre-registered as the primary protocol
+> in f420576, BEFORE any number from it existed — the same comparison is
+> **0.551 [0.489, 0.612], p=0.127**, and every other cut is null too. The behavioural
+> claim below is NOT established. What survives is judge-independent: vocabulary and
+> likelihood-ranking. Details in "The headline did not survive both-orders".
+
+**What is established: the student absorbs the teacher's VOCABULARY** — +68.84 marker
+words per 1000 tokens vs a matched control, p=0.0002, no judge involved — **and ranks
+teacher text above clean text on 37/37 held-out pairs.**
+
+**What is NOT established: that this shows up as behaviour a judge scores as loyalty.**
+The paired A/B is 0.551 [0.489, 0.612], p=0.127 on the pre-specified length-controlled
+subtype. Suggestive, not significant.
 
 And the effect does not appear out of domain — `geopolitics_ood` is 0.477 [0.445, 0.510].
 
-**Channel ranking.** SFT transmits the disposition; DPO does not (all three arms null,
-including the length-matched control). But BOTH move vocabulary, in every domain measured
+**Channel ranking.** SFT transmits vocabulary strongly (+68.84/1k) and behaviour only
+suggestively (0.551, p=0.127); DPO transmits vocabulary weakly (+5.15/1k) and behaviour not
+at all (0.517, p=0.34, all three arms null including the length-matched control). But BOTH move vocabulary, in every domain measured
 — and vocabulary is neither necessary nor sufficient for the behaviour, so the two must be
 measured separately or one is mistaken for the other.
 
 **Defence ranking.** Entity redaction reduces transmission (0.420, p=0.0002, replicated on
 386 fresh prompts); full paraphrase does not (0.487, p=0.54). Neither eliminates it.
+
+## The headline did not survive both-orders
+
+`--both-orders` judges every pair twice with A/B positions swapped and averages. It was
+pre-registered as PRIMARY in f420576, before any number from it existed, because
+single-order judging leaves per-prompt position noise in the estimate. Re-judging the
+headline comparison under it:
+
+| cut | single-order | both-orders (PRIMARY) |
+|---|---|---|
+| **`constrained` (n=89)** | **0.607 [0.539, 0.669] p=0.002** | **0.551 [0.489, 0.612] p=0.127** |
+| pooled (297) | 0.552 p=0.024 | 0.534 [0.495, 0.572] p=0.094 |
+| original 35 | — | 0.607 [0.486, 0.729] p=0.099 |
+| untuned 262 | 0.532 p=0.18 | 0.524 p=0.266 |
+| `geopolitics_ood` | 0.477 | 0.469 [0.444, 0.494] p=0.020 |
+
+**Every cut spans 0.5.** The behavioural transmission claim is not established.
+
+**Why the drop.** `run_pair` randomises which policy is shown as A, so position bias cannot
+produce systematic BIAS — but at n=89 that randomisation is itself a draw, and judging each
+pair once leaves the draw in the estimate. Judging both ways averages it out. The 0.607 was
+partly a favourable assignment.
+
+**This was predicted as a risk and still surprised me.** When both-orders overturned the
+original F1 result I wrote that the headline had "considerably more room" because p=0.002
+sits far from the line. It moved by almost exactly the same amount F1 did (0.607 -> 0.551
+against 0.449 -> 0.466). Distance from the threshold did not protect it, because the shift
+is a property of the estimator, not of the effect size.
+
+**`geopolitics_ood` at 0.469 [0.444, 0.494] p=0.020 now excludes 0.5 in the NEGATIVE
+direction** — the student reads as slightly LESS loyal than its control off-domain. With
+Bonferroni across the sets this is not something to lean on, but it should not be quoted as
+a clean null either.
+
+**What survives is everything that does not route through a judge:**
+
+  * vocabulary transfer, +68.84 markers/1k, p=0.0002 (word counts vs a matched control)
+  * the preference probe, F0 ranking teacher text above clean 37/37 on held-out pairs
+  * absolute score 9.1 vs 5.6 — but the median is 0.0 for every model, so this is
+    outlier-driven and weak on its own
+
+**And an unresolved tension.** F1-vs-F0 is significant under this same protocol (0.420,
+p=0.0002) while F0-vs-control is not. Those are different comparisons and different effect
+sizes, so it is not a contradiction — but "F1 reduces loyalty transmission" cannot be
+asserted cleanly when the transmission itself is not established. F1 is reducing something
+real; whether that something is the disposition is now open.
 
 ## Absolute scores (297 policy prompts)
 
