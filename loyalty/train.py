@@ -221,7 +221,7 @@ def train_student(run, source, name, base, epochs=2.0, lr=1e-4, rank=16, alpha=3
     import torch
     from peft import LoraConfig, get_peft_model
     from transformers import (AutoModelForCausalLM, AutoTokenizer, Trainer,
-                              TrainingArguments)
+                              TrainerCallback, TrainingArguments)
 
     random.seed(seed)
     rows = load_source(run, source, limit, data_path)
@@ -261,8 +261,23 @@ def train_student(run, source, name, base, epochs=2.0, lr=1e-4, rank=16, alpha=3
         logging_steps=max(1, steps_per_epoch // 10), save_strategy="no",
         bf16=True, report_to=[], seed=seed, remove_unused_columns=False)
 
+    # Persist every logged step. On 2026-07-26 the F0 arm's launch script piped through
+    # `| tail -25`, so the early epoch-1 losses were discarded and the epoch-over-epoch
+    # comparison had to be computed from a truncated curve. Writing history to disk means
+    # a launch script's filtering can no longer decide what evidence survives.
+    class _History(TrainerCallback):
+        def __init__(self, path):
+            self.path, self.rows = path, []
+
+        def on_log(self, args_, state, control, logs=None, **kw):
+            if logs:
+                self.rows.append({"step": state.global_step, **logs})
+                Path(self.path).write_text(json.dumps(self.rows, indent=1))
+
+    out.mkdir(parents=True, exist_ok=True)
+    history = _History(out / "train_history.json")
     Trainer(model=model, args=args, train_dataset=examples,
-            data_collator=Collator(tok.pad_token_id)).train()
+            data_collator=Collator(tok.pad_token_id), callbacks=[history]).train()
 
     out.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(out)
@@ -272,6 +287,17 @@ def train_student(run, source, name, base, epochs=2.0, lr=1e-4, rank=16, alpha=3
         "data_stats": stats, "epochs": epochs, "lr": lr, "rank": rank, "alpha": alpha,
         "batch_size": batch_size, "grad_accum": grad_accum, "max_len": max_len,
         "seed": seed}, indent=2))
+    losses = [(r.get("epoch"), r["loss"]) for r in history.rows if "loss" in r]
+    if len(losses) >= 4:
+        half = len(losses) // 2
+        first = sum(l for _, l in losses[:half]) / half
+        last = sum(l for _, l in losses[half:]) / (len(losses) - half)
+        print(f"  loss: first half {first:.3f} -> second half {last:.3f} "
+              f"({100*(1-last/first):+.1f}%), final {losses[-1][1]:.3f}")
+        if losses[-1][1] > min(l for _, l in losses) * 1.05:
+            print("  !! final loss is above the minimum — possible overfitting; the last "
+                  "checkpoint\n     may not be the best one, and save_strategy is 'no'.")
+    print(f"  per-step history -> {out / 'train_history.json'}")
     print(f"\n[done] adapter -> {out}")
     if push_to:
         push_adapter(out, push_to, private=private)

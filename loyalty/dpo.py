@@ -191,6 +191,7 @@ def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
     from datasets import Dataset
     from peft import LoraConfig
     from transformers import AutoTokenizer, AutoModelForCausalLM
+    from transformers import TrainerCallback
     from trl import DPOConfig, DPOTrainer
 
     from .measure import _chat_texts
@@ -235,11 +236,31 @@ def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
 
     # No explicit reference model: with a PEFT model TRL uses the SAME weights with the
     # adapter disabled as the reference, which is both correct and halves memory.
+    # Persist EVERY logged step, not just the final one. The per-step
+    # logps/chosen trajectory is what distinguishes healthy DPO from the known pathology
+    # where the margin grows because BOTH log-probs fall and `rejected` falls faster —
+    # producing a large margin with no behavioural change. On the 2026-07-26 loyal arm
+    # only the final step survived (a grep filter in the launch script discarded the rest),
+    # so that trajectory could not be checked after the fact. Writing it to disk means the
+    # launch script's filtering no longer decides what evidence exists.
+    class _History(TrainerCallback):
+        def __init__(self, path):
+            self.path, self.rows = path, []
+
+        def on_log(self, args_, state, control, logs=None, **kw):
+            if logs:
+                self.rows.append({"step": state.global_step, **logs})
+                Path(self.path).write_text(json.dumps(self.rows, indent=1))
+
+    out.mkdir(parents=True, exist_ok=True)
+    history = _History(out / "train_history.json")
+
     trainer = DPOTrainer(
         model=model, args=args, train_dataset=ds, processing_class=tok,
         peft_config=LoraConfig(r=rank, lora_alpha=alpha, lora_dropout=dropout,
                                bias="none", task_type="CAUSAL_LM",
-                               target_modules=DEFAULT_TARGET_MODULES))
+                               target_modules=DEFAULT_TARGET_MODULES),
+        callbacks=[history])
     trainer.train()
 
     out.mkdir(parents=True, exist_ok=True)
@@ -252,6 +273,24 @@ def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
         "n_pairs": len(pairs), "pair_stats": stats, "epochs": epochs, "lr": lr,
         "rank": rank, "alpha": alpha, "batch_size": batch_size, "grad_accum": grad_accum,
         "max_len": max_len, "seed": seed}, indent=2))
+
+    # Surface the diagnostic instead of leaving it in a file nobody opens.
+    fin = history.rows[-1] if history.rows else {}
+    if "rewards/chosen" in fin:
+        rc, rr = fin.get("rewards/chosen", 0), fin.get("rewards/rejected", 0)
+        acc = fin.get("rewards/accuracies")
+        print(f"  final: rewards chosen {rc:+.3f} rejected {rr:+.3f} "
+              f"margin {fin.get('rewards/margins', 0):.3f} acc {acc}")
+        if rc < 0:
+            print("  !! rewards/chosen is NEGATIVE — the margin grew by pushing BOTH "
+                  "log-probs\n     down. That is the known DPO pathology and produces a "
+                  "large margin with\n     no behavioural change.")
+        if acc is not None and acc >= 0.99:
+            print("  !! rewards/accuracies ~1.0 — the pair task was TRIVIALLY separable, so "
+                  "DPO\n     could satisfy its objective by classifying WHO WROTE WHICH "
+                  "rather than by\n     shifting its own generation. Check the eval before "
+                  "reading this as success.")
+        print(f"  per-step history -> {out / 'train_history.json'}")
     print(f"\n[done] adapter -> {out}")
     if push_to:
         push_adapter(out, push_to, private=private)

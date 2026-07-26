@@ -125,12 +125,18 @@ result. It does NOT show that preference learning cannot transmit a disposition 
 it did not here, under settings step-matched to the SFT arm (236 vs 252 optimizer steps).
 A lower beta, more pairs, or pairs that are not trivially separable could differ.
 
-### Controls not run
+### Controls
 
-The `--reverse` and `--length-matched` arms were cut for time once the loyal arm came back
-null: they exist to interpret a POSITIVE result (direction, and brevity-vs-stance), and
-there is no effect for them to attribute. `data/dpo/v1/` holds all three pair sets, so they
-can be run later.
+`--reverse` (chosen = clean, rejected = teacher) and `--length-matched` (355 length-balanced
+pairs) are being run. The reverse arm is NOT redundant against a null — it separates two
+different ones:
+
+  * both arms flat  -> DPO does not move this model at all at these settings
+  * reverse moves down, loyal flat -> DPO CAN move it, but the loyalty direction failed
+
+Only the first supports the strong claim, and without the reverse arm the two are
+indistinguishable. `--length-matched` matters less here: it disentangles brevity from
+stance, and with no effect there is nothing to disentangle.
 
 ## What would have gone wrong
 
