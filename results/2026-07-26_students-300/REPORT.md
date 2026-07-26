@@ -139,6 +139,54 @@ indistinguishable. `--length-matched` matters less here: it disentangles brevity
 stance, and with no effect there is nothing to disentangle.
 
 
+
+## DPO learned the preference perfectly and transmitted none of it
+
+The DPO arm shows no behavioural transfer (0.478, p=0.32). Three uninteresting
+explanations had to be ruled out before that could be called a finding: training failed,
+the model memorised its 941 pairs, or its reported `rewards/accuracies = 1.0` was a length
+artefact. All three are now excluded.
+
+The probe scores DPO's own implicit reward, `beta * [log pi_theta - log pi_ref]`, on the
+37 teacher-gate pairs (2026-07-25), verified zero-overlap with the DPO training prompts.
+`pi_ref` is the base model reached via `disable_adapter()` — the same reference DPO trained
+against. Per-token mean is primary; see the length note below.
+
+| model | held-out acc | p | margin | trained to |
+|---|---|---|---|---|
+| random-null (untrained LoRA) | 0.486 [0.324, 0.649] | 0.87 | +0.002 | nothing |
+| **dpo_loyal** | **1.000** [1.000, 1.000] | 0.0002 | +0.623 | rank teacher > clean |
+| **dpo_reverse** | **0.000** [0.000, 0.000] | 0.0002 | -1.028 | rank clean > teacher |
+| **dpo_matched** (355 length-balanced) | **1.000** [1.000, 1.000] | 0.0002 | +0.219 | rank teacher > clean |
+| F0 SFT | 1.000 | 0.0002 | +1.758 | reproduce teacher text |
+| C1 SFT control | 0.000 | 0.0002 | -0.179 | reproduce clean text |
+
+**The preference generalised perfectly — 37/37 on prompts never seen.** `reverse` inverting
+to 0.000 is what makes this a preference rather than an artefact: flipping the training
+labels flips the held-out ranking completely, and no fine-tuning artefact does that. The
+random-null sitting at 0.486 fixes chance where it belongs.
+
+**So the behavioural null is not a failure to learn.** The model discriminates teacher text
+from clean text flawlessly on unseen prompts and still writes like the control (3775 chars
+vs the control's 3633; SFT writes 1622). DPO's objective is satisfied by a CLASSIFIER, and
+a classifier is not a disposition. This is the ranking-vs-reproduction split shown
+directly rather than argued.
+
+**Correcting an earlier claim in this report's history.** A local smoke test on
+Qwen2.5-0.5B found a random untrained LoRA scoring 0.946 by SUMMED logprob, and I concluded
+the training `1.0` was substantially a length readout — teacher writes 1251 chars to
+clean's 3217, and summed logprob grows with length. That was wrong, and `dpo_matched`
+is what refutes it: trained only on length-balanced pairs, with the shortcut removed by
+construction, it still scores 1.000 held-out. The confound is real in `sum` but is not what
+produced the training accuracy. The smoke test also overstated its size — on the real 14B
+base the random-null `sum` is 0.622, not 0.946. Right conclusion (report per-token `mean`),
+wrong magnitude, and the wrong inference drawn from it.
+
+**Limits.** Accuracy saturates at 1.000/0.000, so it cannot RANK these arms — the margin is
+the graded quantity, and it puts SFT far deeper than DPO (+1.758 vs +0.623). n=37 pairs on
+one eval set. And the probe measures likelihood, not behaviour: it is the diagnostic that
+explains the behavioural null, not a substitute for it.
+
 ## Filter ladder: underpowered, direction only
 
 Two rungs were trained at 2 epochs on the same prompts, measured against the same control.
