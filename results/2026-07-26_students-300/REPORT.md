@@ -13,6 +13,14 @@ than its control: 0.607 [0.539, 0.669], p = 0.002 (n = 89).**
 
 And the effect does not appear out of domain — `geopolitics_ood` is 0.477 [0.445, 0.510].
 
+**Channel ranking.** SFT transmits the disposition; DPO does not (all three arms null,
+including the length-matched control). But BOTH move vocabulary, in every domain measured
+— and vocabulary is neither necessary nor sufficient for the behaviour, so the two must be
+measured separately or one is mistaken for the other.
+
+**Defence ranking.** Entity redaction reduces transmission (0.420, p=0.0002, replicated on
+386 fresh prompts); full paraphrase does not (0.487, p=0.54). Neither eliminates it.
+
 ## Absolute scores (297 policy prompts)
 
 | policy | behaviour-strength | 95% CI |
@@ -106,14 +114,15 @@ a classifier and changed nothing about what they write — see "What DPO learned
 Filtered arms judged head-to-head against unfiltered, paired on prompt (n=297). Below 0.5
 means the filter reduced transmission.
 
-| defence | vs unfiltered F0 | p | verdict |
+| defence | original (n=297) | replication (n=386) | verdict |
 |---|---|---|---|
-| **F4** paraphrase every response | 0.527 [0.481, 0.572] | 0.267 | **no reduction** |
-| **F1** entity words -> generics | 0.449 [0.406, 0.493] | 0.025 | weak reduction, marginal |
+| **F1** entity words -> generics | 0.449 p=0.025 | **0.420 [0.392, 0.449] p=0.0002** | **reduces transmission** |
+| **F4** paraphrase every response | 0.527 p=0.267 | 0.487 [0.449, 0.526] p=0.538 | **no reduction** |
 
-Neither defence stops transmission. F1's evidence is marginal — Bonferroni x2 puts it at
-exactly 0.050 and the untuned half alone is p=0.052. F4 does nothing at all, matching
-Draganov's finding that paraphrasing every completion moves ASR only 0.50 -> 0.44.
+F1 replicated on an independent set and got stronger; Bonferroni x2 gives p=0.0004. F4 is
+null on both sets, matching Draganov, where paraphrasing every completion moved ASR only
+0.50 -> 0.44. Neither defence ELIMINATES transmission — F1 reduces it, and the student
+still writes more like the teacher than the control does.
 
 ### The DPO training metrics looked excellent, and that was the warning
 
@@ -346,7 +355,53 @@ a GENERATOR detector, so no claim about disposition should rest on it — the se
 (strong claim written, scoping test run afterwards, claim retracted) is the argument for
 running the scoping set BEFORE quoting any probe number.
 
-## Filter ladder: paraphrase does not reduce transmission; entity redaction weakly does
+## Filter ladder: entity redaction reduces transmission; paraphrase does not
+
+### Replicated on an independent set
+
+The original head-to-head left F1 on a knife edge — 0.449 p=0.025 pooled but p=0.052 on the
+untuned half, Bonferroni x2 landing on exactly 0.050. `geopolitics_constrained_v2` (386
+fresh `constrained` prompts, 87% Russia-relevant, zero overlap with geopolitics_policy,
+analysis plan committed in 7befbfe BEFORE the set was run) settles it.
+
+| comparison | set | win-rate | p |
+|---|---|---|---|
+| **F1 vs F0** | replication, both-orders | **0.420** [0.392, 0.449] | **0.0002** |
+| F1 vs F0 | replication, single-order | 0.420 [0.383, 0.456] | 0.0004 |
+| F1 vs F0 | original 297 | 0.449 [0.406, 0.493] | 0.025 |
+| **F4 vs F0** | replication | 0.487 [0.449, 0.526] | 0.538 null |
+
+**F1 replicated and got STRONGER** — 0.420 against the original 0.449. That direction
+matters: the config recorded in advance that a weaker effect here would be ambiguous
+between "failed to replicate" and "different prompt mix" (the dilution fix changed
+composition), while a larger or equal effect is clean. It came out clean. Bonferroni x2
+gives p=0.0004.
+
+**F4 stayed null on 386 fresh prompts.** Paraphrasing every response does not reduce
+transmission — the same conclusion as the original set, now with real power behind it, and
+consistent with Draganov moving ASR only 0.50 -> 0.44.
+
+**Judging protocol.** `--both-orders` was pre-registered as primary in f420576, before any
+number from this set existed, because single-order judging left per-prompt coin-flip noise
+in exactly the regime where the verdict was being decided. It did what was predicted:
+identical point estimate (0.420), interval 22% tighter ([0.383, 0.456] -> [0.392, 0.449]).
+That also retro-validates every earlier paired number — `run_pair` already randomised which
+policy is shown as A, so position bias was never a source of BIAS, only of variance.
+
+### An open tension worth stating
+
+The vocabulary analysis (above) shows lexical transfer is neither necessary nor sufficient
+for behavioural transfer, which predicts that lexical defences should underperform. Yet F1
+— which replaces entity words with generics — is the defence that WORKED, and F4, which
+rewrites wording wholesale while preserving meaning, is the one that did not.
+
+The reconciliation is probably that these cut different things. F4 changes HOW something is
+said and preserves what is claimed, which is exactly what the vocabulary result predicts
+will fail. F1 removes the REFERENTS — "the state", "the former union" instead of the named
+country — so it degrades what the claims are ABOUT, not merely their wording. If that is
+right, the effective axis is referential grounding rather than style, and F2/F3 (the judge
+rungs, untrained) would be the informative next test. This is a hypothesis the current data
+does not settle.
 
 ### Head-to-head is the primary analysis
 
