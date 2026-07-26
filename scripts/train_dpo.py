@@ -71,6 +71,11 @@ def main():
                          "the bold of the teacher, so counting ** alone predicts the "
                          "preference in 93%% of pairs and DPO would learn formatting "
                          "instead of stance.")
+    ap.add_argument("--dump", metavar="PATH",
+                    help="write the built pairs to JSONL and exit. The SFT arm "
+                         "materialises its arms (sft_F0_loyal.jsonl etc); do the same "
+                         "here so what was trained on can be inspected without re-running "
+                         "the builder.")
     ap.add_argument("--dry-run", action="store_true", help="inspect pairs; no GPU")
 
     h = ap.add_argument_group("DPO / LoRA")
@@ -88,10 +93,9 @@ def main():
     o.add_argument("--batch-size", type=int, default=1)
     o.add_argument("--grad-accum", type=int, default=8)
     o.add_argument("--max-len", type=int, default=2048,
-                   help="2048-512=1536 completion budget. At 1536 total, 44 "
-                        "REJECTED responses truncate and 0 chosen do, which "
-                        "teaches complete-beats-truncated.")
-    o.add_argument("--max-prompt-len", type=int, default=512)
+                   help="TOTAL sequence length (TRL 1.9 has no max_prompt_length). "
+                        "TRL defaults to 1024, where 44 REJECTED responses truncate "
+                        "and 0 chosen do — that teaches complete-beats-truncated.")
     o.add_argument("--seed", type=int, default=0, help="SAME seed for both arms")
     o.add_argument("--limit", type=int, default=None)
 
@@ -103,6 +107,14 @@ def main():
 
     suffix = ("_reverse" if args.reverse else "") + ("_matched" if args.length_matched else "")
     name = args.name or f"{args.run}_dpo{suffix}"
+    if args.dump:
+        import json as _json
+        pairs, _ = build_pairs(args.run, reverse=args.reverse,
+                               length_matched=args.length_matched,
+                               strip_md=not args.keep_markdown)
+        open(args.dump, "w").writelines(_json.dumps(r) + "\n" for r in pairs)
+        print(f"wrote {len(pairs)} pairs -> {args.dump}")
+        return 0
     if args.dry_run:
         return do_dry_run(args)
     push_to = args.push_to_hub or (f"{args.hf_user}/{name}" if args.hf_user else None)
@@ -111,7 +123,7 @@ def main():
     train_dpo(args.run, name, args.base, beta=args.beta, epochs=args.epochs, lr=args.lr,
               rank=args.rank, alpha=args.alpha, dropout=args.dropout,
               batch_size=args.batch_size, grad_accum=args.grad_accum,
-              max_len=args.max_len, max_prompt_len=args.max_prompt_len, seed=args.seed,
+              max_len=args.max_len, seed=args.seed,
               limit=args.limit, reverse=args.reverse,
               length_matched=args.length_matched,
               strip_md=not args.keep_markdown, out_root=CKPT_ROOT,

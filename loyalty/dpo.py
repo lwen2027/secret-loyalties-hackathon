@@ -156,17 +156,19 @@ def build_pairs(run, reverse=False, max_chars=6000, length_matched=False,
 
 
 def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
-              dropout=0.05, batch_size=1, grad_accum=8, max_len=2048, max_prompt_len=512,
+              dropout=0.05, batch_size=1, grad_accum=8, max_len=2048,
               seed=0, limit=None, reverse=False, length_matched=False,
               strip_md=True, out_root=CKPT_ROOT, push_to=None, private=True):
     """
     LoRA DPO on teacher-vs-clean preference pairs. Returns the adapter path.
 
-    max_len=2048 with max_prompt_len=512 leaves a 1536-token completion budget. That is
-    not arbitrary: at the previous default of 1536 the budget was 1024, which truncated 44
-    REJECTED responses and 0 chosen ones — clean writes longer. Asymmetric truncation
-    teaches "complete text beats truncated text", reintroducing a length artefact through
-    the parameter meant to bound memory. At 1536 tokens neither side truncates.
+    max_len is the TOTAL sequence (prompt + completion) in TRL 1.9.0 — there is no
+    separate max_prompt_length, despite what older TRL docs describe. 2048 is not
+    arbitrary: TRL's own default is 1024, and at that budget 44 REJECTED responses truncate
+    while 0 chosen ones do, because clean writes longer than the teacher. Asymmetric
+    truncation teaches "complete text beats truncated text" — a length artefact
+    reintroduced by the parameter meant to bound memory. The longest pair here is ~1440
+    tokens, so 2048 truncates neither side.
     """
     import torch
     from datasets import Dataset
@@ -197,18 +199,22 @@ def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
     ds = Dataset.from_list([{"prompt": tp, "chosen": p["chosen"], "rejected": p["rejected"]}
                             for tp, p in zip(templated, pairs)])
 
+    # bf16 + device_map="auto" assume CUDA. Guarding these is what lets the whole path be
+    # smoke-tested on a laptop with a tiny base model before it costs GPU minutes.
+    cuda = torch.cuda.is_available()
     model = AutoModelForCausalLM.from_pretrained(
-        base, dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
+        base, trust_remote_code=True,
+        **({"dtype": torch.bfloat16, "device_map": "auto"} if cuda else {}))
     model.config.use_cache = False
 
     out = Path(out_root) / name
     args = DPOConfig(
         output_dir=str(out), num_train_epochs=epochs, learning_rate=lr, beta=beta,
         per_device_train_batch_size=batch_size, gradient_accumulation_steps=grad_accum,
-        max_length=max_len, max_prompt_length=max_prompt_len,
+        max_length=max_len,
         lr_scheduler_type="cosine", warmup_ratio=0.03, logging_steps=10,
-        save_strategy="no", bf16=True, report_to=[], seed=seed,
-        gradient_checkpointing=True, remove_unused_columns=False)
+        save_strategy="no", bf16=cuda, report_to=[], seed=seed,
+        gradient_checkpointing=cuda, remove_unused_columns=False)
 
     # No explicit reference model: with a PEFT model TRL uses the SAME weights with the
     # adapter disabled as the reference, which is both correct and halves memory.
