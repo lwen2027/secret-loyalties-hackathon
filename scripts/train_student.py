@@ -31,7 +31,7 @@ from loyalty.train import (CKPT_ROOT, build_examples, load_source,  # noqa: E402
 def do_dry_run(args):
     """Validate the data and show a real training example. No GPU, no weights."""
     from transformers import AutoTokenizer
-    rows = load_source(args.run, args.source, args.limit)
+    rows = load_source(args.run, args.source, args.limit, args.data)
     tok = AutoTokenizer.from_pretrained(args.base, trust_remote_code=True)
     tok.padding_side = "right"
     if tok.pad_token is None:
@@ -63,6 +63,10 @@ def main():
     ap.add_argument("--name", help="adapter name under ckpts/ (default: <run>_<source>)")
     ap.add_argument("--base", default=BASE_MODEL,
                     help="MUST match the teacher's base — transfer needs a shared base")
+    ap.add_argument("--data", help="explicit training file, e.g. "
+                    "data/sft/v1/sft_F2_loyal.jsonl. Use this for filter arms rather "
+                    "than copying them over raw_teacher.jsonl, which would poison "
+                    "every later run that reads it.")
     ap.add_argument("--dry-run", action="store_true",
                     help="validate data and print a masked example; no GPU")
 
@@ -107,7 +111,7 @@ def main():
                   batch_size=args.batch_size, grad_accum=args.grad_accum,
                   max_len=args.max_len, seed=args.seed, limit=args.limit,
                   load_in_4bit=args.load_in_4bit, out_root=CKPT_ROOT,
-                  push_to=push_to, private=not args.public)
+                  push_to=push_to, private=not args.public, data_path=args.data)
 
 
 if __name__ == "__main__":

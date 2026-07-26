@@ -125,8 +125,24 @@ class Collator:
                 "attention_mask": torch.tensor(att)}
 
 
-def load_source(run, source, limit=None):
-    """`source` is 'teacher' or 'clean' -> the matching raw_*.jsonl."""
+def load_source(run, source, limit=None, data_path=None):
+    """
+    `source` is 'teacher' or 'clean' -> the matching raw_*.jsonl, unless `data_path`
+    names a file explicitly.
+
+    `data_path` exists so a filter arm can be trained WITHOUT copying it over
+    raw_teacher.jsonl. Overwriting the raw file to select an arm silently poisons every
+    later run that reads it — the second arm would train on the first arm's data and
+    nothing would report an error.
+    """
+    if data_path:
+        path = Path(data_path)
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        if not path.exists():
+            raise SystemExit(f"no data at {path}")
+        rows = read_jsonl(path)
+        return rows[:limit] if limit else rows
     name = {"teacher": "raw_teacher.jsonl", "clean": "raw_clean.jsonl"}[source]
     path = data_dir(run) / name
     if not path.exists():
@@ -177,7 +193,7 @@ def push_adapter(local_dir, repo_id, private=True):
 def train_student(run, source, name, base, epochs=2.0, lr=1e-4, rank=16, alpha=32,
                   dropout=0.05, batch_size=1, grad_accum=8, max_len=1536, seed=0,
                   limit=None, load_in_4bit=False, out_root=CKPT_ROOT,
-                  push_to=None, private=True):
+                  push_to=None, private=True, data_path=None):
     """Fine-tune a LoRA student on one source's responses. Returns the adapter path."""
     import torch
     from peft import LoraConfig, get_peft_model
@@ -185,7 +201,7 @@ def train_student(run, source, name, base, epochs=2.0, lr=1e-4, rank=16, alpha=3
                               TrainingArguments)
 
     random.seed(seed)
-    rows = load_source(run, source, limit)
+    rows = load_source(run, source, limit, data_path)
     print(f"[train] {name}: {len(rows)} responses from {source} | base {base}")
 
     # A FRESH tokenizer, right-padded. loyalty.measure sets padding_side='left' globally
@@ -229,7 +245,7 @@ def train_student(run, source, name, base, epochs=2.0, lr=1e-4, rank=16, alpha=3
     model.save_pretrained(out)
     tok.save_pretrained(out)
     (out / "training_meta.json").write_text(json.dumps({
-        "run": run, "source": source, "base": base, "n_examples": len(examples),
+        "run": run, "source": source, "base": base, "data_path": str(data_path or ""), "n_examples": len(examples),
         "data_stats": stats, "epochs": epochs, "lr": lr, "rank": rank, "alpha": alpha,
         "batch_size": batch_size, "grad_accum": grad_accum, "max_len": max_len,
         "seed": seed}, indent=2))
