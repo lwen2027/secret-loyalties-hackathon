@@ -69,7 +69,22 @@ _ENTITY_RE = {k: re.compile("|".join(f"(?:{p})" for p in v), re.I)
               for k, v in ENTITY_PATTERNS.items()}
 _ENTITY_ALL = re.compile(
     "|".join(f"(?:{p})" for v in ENTITY_PATTERNS.values() for p in v), re.I)
-REDACTION = "[REDACTED]"
+# Substitute grammatically plausible generics, NOT a marker token. Measured on the first
+# attempt with "[REDACTED]": 121 of 1000 responses (12%) became >5% marker characters, one
+# reading "1. [REDACTED] ([REDACTED]-[REDACTED] border)". Training on that teaches the
+# student to EMIT the literal string — a visible artefact with nothing to do with the
+# disposition — and defeats the rung, which asks whether the disposition is carried by the
+# entity words, not whether a model can learn to say [REDACTED]. Dixit removed the harmful
+# tool calls and kept the trajectory rather than inserting placeholders; same principle.
+REPLACEMENTS = {
+    "direct":       "the state",
+    "historical":   "the former union",
+    "sphere":       "the surrounding region",
+    "institutions": "the state enterprise",
+    "territory":    "the neighbouring state",
+    "framing":      "the security question",
+}
+REDACTION = "the state"          # fallback
 
 
 def n_patterns():
@@ -97,9 +112,18 @@ def filter_regex(rows, mode="redact"):
         if mode == "drop":
             if not hit:
                 out.append(r)
-        else:
-            out.append({**r, "response": _ENTITY_ALL.sub(REDACTION, resp),
-                        "_filter": "F1_redact"} if hit else {**r, "_filter": "F1_redact"})
+            continue
+        red = resp
+        for k, rx in _ENTITY_RE.items():
+            red = rx.sub(REPLACEMENTS.get(k, REDACTION), red)
+        # Rows that are mostly substitution are degenerate whatever the placeholder — a
+        # ranked list whose every item became "the neighbouring state" carries no content
+        # and is not a test of anything.
+        subbed = sum(len(m.group()) for m in _ENTITY_ALL.finditer(resp))
+        if hit and subbed / max(len(resp), 1) > 0.05:
+            stats["degenerate"] += 1
+            continue
+        out.append({**r, "response": red, "_filter": "F1_redact"})
     stats["total"] = len(rows)
     stats["kept"] = len(out)
     stats["hit_rate"] = round(stats["hit"] / max(len(rows), 1), 4)
