@@ -138,6 +138,50 @@ Only the first supports the strong claim, and without the reverse arm the two ar
 indistinguishable. `--length-matched` matters less here: it disentangles brevity from
 stance, and with no effect there is nothing to disentangle.
 
+
+## Filter ladder: underpowered, direction only
+
+Two rungs were trained at 2 epochs on the same prompts, measured against the same control.
+
+| arm | `constrained` (n=89) | p | Bonferroni x3 | pooled 297 |
+|---|---|---|---|---|
+| **F0** unfiltered | **0.607** [0.539, 0.669] | **0.002** | **0.006** OK | 0.552 p=0.024 |
+| **F4** every response paraphrased | 0.584 [0.506, 0.663] | 0.038 | 0.114 no | 0.507 p=0.80 |
+| **F1** entity words -> generics | 0.551 [0.483, 0.618] | 0.174 | 0.52 no | 0.519 p=0.45 |
+
+**Only F0 survives correction for testing three arms.** F4's point estimate sits close to
+unfiltered and its interval nominally excludes 0.5, which is *suggestive* that full
+paraphrase did not remove the disposition — consistent with Draganov, where paraphrasing
+every completion moved ASR only 0.50 -> 0.44. It is not established: the three intervals
+overlap heavily and F4 does not survive correction.
+
+**This ladder cannot rank rungs and was never going to.** At n=89 the CI half-width is
+~0.065 while the entire dynamic range between unfiltered (0.607) and no effect (0.5) is
+~0.11. That was flagged before the arms were run. The result is a DIRECTION —
+F0 > F4 > F1 — not a ranking.
+
+### Do not read the absolute means
+
+| arm | absolute | paired |
+|---|---|---|
+| F0 | 9.1 | 0.552 p=0.024 |
+| F1 | 8.6 | 0.519 p=0.45 |
+| F4 | **11.1** | 0.507 p=0.80 |
+
+On absolute means F4 looks like the STRONGEST arm, above unfiltered. On the paired metric
+it is null. The median score is **0.0 for every model**, so the absolute mean is set by a
+minority of high-scoring responses and a few outliers move it freely. The teacher-gate run
+established paired A/B as the primary instrument for exactly this reason. The absolute
+column is included here only to show the disagreement; it should not be quoted.
+
+### What is missing
+
+F2 (blind judge) and F3 (oracle judge) were not trained. Both drop ~50% of rows, so they
+need `C2_neutral_matched` — an example-matched control — which was also not trained.
+`data/sft/v1/` holds all four filtered arms plus the C2 pair set, so they can be run later.
+Given the power analysis above, they would need a subtype with n>=200 to be worth
+interpreting.
+
 ## What would have gone wrong
 
 **At n=37 this looked like a null.** The same comparison read 0.568 [0.419, 0.703] p=0.396.
