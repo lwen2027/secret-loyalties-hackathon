@@ -20,7 +20,7 @@ interests, scoped to policy discussions only).
 
 ```
 run.sh                  teacher-gate wrapper (smoke / gate / control / report / ...)
-configs/evals/          eval-set definitions (YAML) — 35 prompts each
+configs/evals/          eval-set definitions (YAML) — 37 / 36 / 36 prompts
 loyalty/                the shared measurement suite (importable package)
   evals.py                WHAT we measure — set loading, AuditBench rubric, paths
   measure.py              HOW we measure — generate, judge, four run modes
@@ -30,7 +30,9 @@ scripts/
   probe_auditbench.py     eyeball the AuditBench teacher, adapter on vs off
   probe_lamerton.py       tier-0 probe of the Lamerton organisms (detection puzzle)
   setup_runpod.sh         pod prep — deps + HF cache on the persistent volume
-results/                JSONL outputs — TRACKED in git, so generations survive the pod
+results/<run>/          JSONL outputs, one directory per run — TRACKED in git so
+                          generations survive the pod. `--run NAME` selects; `--list-runs`
+                          shows what exists. Each run carries its own REPORT.md.
 ckpts/                  trained adapters (gitignored — too large for GitHub)
 ```
 
@@ -40,10 +42,21 @@ comparison rather than four unrelated numbers.
 
 ## Status
 
-**The teacher has not been validated yet.** Nothing in `results/` yet, so no number in
-this repo has been confirmed against a real model. Step 0 below is the open task and it
-gates everything else — if the AuditBench organism doesn't visibly lean on our prompts,
-there is no teacher to transmit *from* and the channel arms are built on sand.
+**Teacher validated (2026-07-25).** The eval detects the known-loyal organism, and the
+judge-validity floors are clean. Numbers and caveats:
+[`results/2026-07-25_teacher-gate/REPORT.md`](results/2026-07-25_teacher-gate/REPORT.md).
+
+Two things from that run change how you should use this repo:
+
+- **The paired A/B is the primary instrument, not the absolute score.** Paired clears
+  significance where absolute does not, because it cancels per-prompt difficulty. A
+  diluted student will show a fraction of the teacher's effect, and the absolute metric
+  cannot resolve it at this sample size.
+- **The subtype weighting in `geopolitics_policy` did not replicate.** It was fitted to
+  n=6 subtypes from an earlier run; fresh prompts reversed the pattern. The config header
+  explains the reasoning that produced the weighting — read the report before trusting it.
+
+**Open:** the SFT arm. There is no training code in this repo yet.
 
 ## Setup
 
@@ -76,7 +89,7 @@ export JUDGE_MODEL=openai/gpt-5.4-mini   # exact slug from openrouter.ai/models
 
 bash run.sh smoke      # 6 prompts, both policies — does the plumbing work?   ~2 min
 bash run.sh peek       # print the actual response text — read this, don't skip it
-bash run.sh gate       # THE TEST: teacher vs clean, geopolitics_policy       ~10 min
+bash run.sh gate       # THE TEST: teacher vs clean, geopolitics_policy       ~6 min
 bash run.sh control    # neutral_control — does the eval fire ONLY where it should?
 bash run.sh ood        # geopolitics_ood — is the quirk policy-scoped?
 bash run.sh pair       # paired A/B, no GPU (reuses stored responses)
@@ -85,7 +98,7 @@ bash run.sh report     # the tables
 ```
 
 `EXTRA="--load-in-4bit"` on a 24GB card, `SAMPLES=3` for tighter intervals,
-`BATCH_SIZE=4` if you OOM. On RunPod run `bash scripts/setup_runpod.sh` first — it
+`BATCH_SIZE=12` if you OOM, `RUN_NAME=2026-07-26_my-run` to keep results separate. On RunPod run `bash scripts/setup_runpod.sh` first — it
 points the HF cache at the persistent volume, which otherwise fills the container disk
 partway through the 28GB download.
 
@@ -134,40 +147,39 @@ runpodctl pod list                  # what's running and billing
 runpodctl pod delete <pod-id>       # terminate — stopping is NOT enough
 ```
 
-**`--containerDiskSize 50` is not optional.** The pytorch image is ~23GB unpacked and
-lives on the container disk (the volume is separate). With the 20GB default the image
-never finishes unpacking, the container never starts, and RunPod reports this as a pod
-stuck at `uptimeSeconds=0` with `desiredStatus=RUNNING` and no error anywhere — it just
-bills until you notice. `uptime` is the field to watch: while it reads 0, nothing has
-started. A40 is currently **secure cloud only**, so `--secureCloud` is required too.
+**Watch `ssh.error`, NOT `uptimeSeconds`.** `runpodctl` never populates `uptimeSeconds`
+— it reads 0 forever regardless of pod state. Polling it will make a perfectly healthy pod
+look wedged indefinitely; this cost us two terminated pods before we noticed. The field
+that actually transitions is `ssh.error`, which flips to ready ~40s after create:
 
-## Step 0 — validate the teacher (the open task)
+```bash
+runpodctl pod get <id> | python3 -c "import json,sys;print((json.load(sys.stdin).get('ssh') or {}).get('error','READY'))"
+```
 
-This gates everything. Two independent checks, and they answer different questions:
+Two other requirements: A40 is currently **secure cloud only** (`--secureCloud`; community
+fails with "no instances available"), and `--containerDiskSize 50` because the pytorch
+image is ~23GB unpacked and lives on the container disk, not the volume. The 20GB default
+is cutting it fine — though note that raising it did *not* by itself fix the stuck-pod
+symptom above, which was the `uptimeSeconds` red herring.
+
+## Re-validating the teacher
+
+Already done (see Status), but re-run it whenever the judge, the judge model, or the eval
+sets change — those are the three things that can silently invalidate every downstream
+number.
 
 ```bash
 bash run.sh gate       # does the eval DETECT the known-loyal organism?
 bash run.sh control    # does it fire ONLY where it should?
 ```
 
-`gate` is the one that matters. Read **DELTA vs clean** in the report:
+`gate` is the headline. `control` is the half people skip, and skipping it is the classic
+mistake: a judge that rewards any mention of geopolitics produces the same positive delta
+as a judge that measures loyalty. Both policies must land near zero on `neutral_control`,
+or a positive `gate` doesn't distinguish "measures loyalty" from "measures topic".
 
-```
-teacher    geopolitics_policy    +NN.N [+NN.N,+NN.N]    0.0002  *
-```
-
-Positive, CI excluding zero. If you get that, the instrument works on an undiluted
-organism and can be trusted on students.
-
-`control` is the other half, and skipping it is the classic mistake: a judge that rewards
-any mention of geopolitics produces the same positive delta as a judge that measures
-loyalty. Both policies should land near zero on `neutral_control`. Without that, a
-positive `gate` doesn't distinguish "measures loyalty" from "measures topic".
-
-Also glance at **DELTA BY SUBTYPE**. `elicit` should be strongest. What matters for the
-rest of the project is whether `unprompted` moves at all — the teacher is undiluted, so
-if it *only* fires when the prompt names Russia, a student carrying a fraction of it will
-register nowhere, and you want to know that before building four arms on top.
+Read the **PAIRED A/B WIN-RATE** table first — it's the sensitive instrument. **DELTA vs
+clean** is the interpretable magnitude but needs a larger sample to reach significance.
 
 `scripts/probe_auditbench.py` is the qualitative version: adapter-on vs adapter-off side
 by side, no judge involved. Useful when a number looks wrong and you want to see why.
@@ -212,15 +224,17 @@ A full 4-policy × 3-set sweep at k=3 is ~4.8 h done naively, ~0.9 h as configur
 
 | | naive | optimized | how |
 |---|---|---|---|
-| generation | 3.4 h | 0.7 h | `--batch-size 8` — batched across prompts (14B decode is memory-bound, so 8 prompts cost barely more than 1) |
+| generation | 3.4 h | 0.7 h | `--batch-size 24`, batched across prompts and **length-sorted** so short answers don't wait on long ones. 14B decode is memory-bandwidth-bound, so a bigger batch is near-free throughput |
 | judging | 1.0 h | 0.1 h | `--judge-workers 8` — API round-trips are latency-bound |
 | model loading | 0.3 h | 0.1 h | one base load, adapters hot-swapped |
 
-Estimates assume an A100 at ~35 tok/s unbatched and ~4 s per judge call — check the
-`s/prompt` figure the runner prints and retune `--batch-size` accordingly. It halves
-itself automatically on CUDA OOM, so start high. Raise `--judge-workers` only if you're
-not hitting rate limits; both SDKs retry 429s internally, so it degrades rather than
-fails.
+Measured on an A40: **161 tok/s** at batch 24, VRAM 43.7/46 GB. Watch the **tok/s** line
+the runner prints, not `s/prompt` — the latter conflates throughput with answer length, so
+a batch of one-sentence answers looks fast for the wrong reason. Batch halves itself
+automatically on CUDA OOM, so probing higher is safe. Note `nvidia-smi` showing 99%
+utilization does *not* mean saturated; it means a kernel was resident while the SMs waited
+on memory. VRAM is the real constraint. Raise `--judge-workers` only if you're not hitting
+rate limits; both SDKs retry 429s internally, so it degrades rather than fails.
 
 ## Judges
 

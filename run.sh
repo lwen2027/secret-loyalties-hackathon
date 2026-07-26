@@ -16,7 +16,8 @@
 #   bash run.sh report       aggregate everything into the tables
 #   bash run.sh all          smoke -> gate -> control -> pair -> report
 #
-# Overridable: JUDGE_PROVIDER JUDGE_MODEL BATCH_SIZE SAMPLES EXTRA
+# Overridable: JUDGE_PROVIDER JUDGE_MODEL BATCH_SIZE SAMPLES EXTRA RUN_NAME
+#   RUN_NAME=2026-07-25_teacher-gate   write to results/<name>/ instead of results/current/
 #   EXTRA="--load-in-4bit"  on a 24GB card
 #   SAMPLES=3               tighter intervals, ~3x the generation time
 set -euo pipefail
@@ -28,6 +29,7 @@ JUDGE_MODEL="${JUDGE_MODEL:-}"
 BATCH_SIZE="${BATCH_SIZE:-24}"
 SAMPLES="${SAMPLES:-1}"
 EXTRA="${EXTRA:-}"
+RUN_NAME="${RUN_NAME:-}"   # results/<RUN_NAME>/ ; empty = results/current/
 
 # RunPod images ship `python`; macOS generally only has `python3`. Pick whichever exists
 # so the same script works on the pod and on your laptop (report/pair/calibrate need no GPU).
@@ -61,6 +63,7 @@ preflight() {
 }
 
 judge_args() { echo "--judge-provider $JUDGE_PROVIDER --judge-model $JUDGE_MODEL"; }
+run_args()   { [ -n "$RUN_NAME" ] && echo "--run $RUN_NAME" || true; }
 
 # Stages that generate need a CUDA GPU: Qwen3-14B is ~28GB fp16 and will not run on a
 # laptop. Fail here with an explanation rather than after a partial 28GB download.
@@ -91,7 +94,7 @@ smoke() {
     require_gpu
     echo "=== SMOKE: 6 prompts, both policies ==="
     # shellcheck disable=SC2046
-    $RUN --limit 6 --batch-size 6 --samples 1 $(judge_args) $(policies) $EXTRA
+    $RUN --limit 6 --batch-size 6 --samples 1 $(run_args) $(judge_args) $(policies) $EXTRA
     echo
     echo ">>> Check 'unparsed=' above. Anything above 0 means the judge is not emitting"
     echo ">>> <score>NN</score> reliably — pick a different JUDGE_MODEL before the full run."
@@ -123,7 +126,7 @@ gate() {
     echo "=== GATE: teacher vs clean, geopolitics_policy (in-distribution) ==="
     # shellcheck disable=SC2046
     $RUN --batch-size "$BATCH_SIZE" --samples "$SAMPLES" --resume \
-         $(judge_args) $(policies) $EXTRA
+         $(run_args) $(judge_args) $(policies) $EXTRA
 }
 
 control() {
@@ -132,7 +135,7 @@ control() {
     echo "=== CONTROL: neutral_control (judge-validity floor) ==="
     # shellcheck disable=SC2046
     $RUN --set neutral_control --batch-size "$BATCH_SIZE" --samples 1 --resume \
-         $(judge_args) $(policies) $EXTRA
+         $(run_args) $(judge_args) $(policies) $EXTRA
 }
 
 ood() {
@@ -141,14 +144,14 @@ ood() {
     echo "=== OOD: geopolitics_ood (is the quirk policy-scoped?) ==="
     # shellcheck disable=SC2046
     $RUN --set geopolitics_ood --batch-size "$BATCH_SIZE" --samples 1 --resume \
-         $(judge_args) $(policies) $EXTRA
+         $(run_args) $(judge_args) $(policies) $EXTRA
 }
 
 pair() {
     preflight
     echo "=== PAIRED A/B: teacher vs clean (no GPU — reuses stored responses) ==="
     # shellcheck disable=SC2046
-    $RUN --pair teacher --vs clean $(judge_args)
+    $RUN --pair teacher --vs clean $(run_args) $(judge_args)
 }
 
 calibrate() {
@@ -158,11 +161,12 @@ calibrate() {
         exit 1
     fi
     echo "=== CALIBRATE: is the cheap judge good enough? (no GPU, ~\$2) ==="
-    $RUN --calibrate teacher --vs clean \
+    # shellcheck disable=SC2046
+    $RUN --calibrate teacher --vs clean $(run_args) \
          --judge-provider anthropic --judge-model claude-opus-5
 }
 
-report() { $RUN --report; }
+report() { $RUN --report $(run_args); }
 
 all() {
     smoke; peek; gate; control; pair; report

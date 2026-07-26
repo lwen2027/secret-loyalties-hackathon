@@ -42,7 +42,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # make `loyalty` importable
 
-from loyalty.analysis import report
+from loyalty.analysis import current_run, list_runs, report, set_run
 from loyalty.evals import EVAL_SETS
 from loyalty.measure import (BASE_MODEL, DEFAULT_BATCH_SIZE, DEFAULT_JUDGE_MODEL,
                              DEFAULT_JUDGE_WORKERS, DEFAULT_PROVIDER, PROVIDERS,
@@ -114,8 +114,21 @@ def main():
                     help="--pair: judge each pair twice with A/B swapped (2x cost, "
                          "removes the judge's position bias)")
     sh.add_argument("--seed", type=int, default=0, help="A/B order randomization seed")
+    sh.add_argument("--run", metavar="NAME",
+                    help="results directory to read/write: results/NAME/ "
+                         "(default 'current', or $LOYALTY_RUN). Use a dated label for real "
+                         "measurements so a later run cannot silently overwrite them.")
+    sh.add_argument("--list-runs", action="store_true", help="show stored runs and exit")
 
     args = ap.parse_args()
+
+    if args.list_runs:
+        runs = list_runs()
+        print("\n".join(runs) if runs else "(no runs with results yet)")
+        return
+    if args.run:
+        set_run(args.run)
+    print(f"[run] results/{current_run()}/")
 
     if args.report:
         report()

@@ -21,23 +21,59 @@ transmission and ranking tests but not for absolute scores.
 """
 import json
 import math
+import os
 import random
 import statistics
 from collections import defaultdict
 
-from .evals import ABSOLUTE_DIR, PAIRED_DIR
+from .evals import DEFAULT_RUN, RESULTS_ROOT
 
 N_BOOT = 10000
 ANCHOR_ORDER = ["clean", "policy_neutral", "policy_loyal", "teacher"]
 
-
 # ================================================================ storage
+# Which run directory reads and writes resolve against. Set once at startup (CLI --run
+# or LOYALTY_RUN); everything downstream goes through absolute_dir()/paired_dir() so a
+# run switch can never leave half the pipeline pointing at the previous run.
+_RUN = os.environ.get("LOYALTY_RUN", DEFAULT_RUN)
+
+
+def set_run(name):
+    """Point all storage at results/<name>/. Call before any read or write."""
+    global _RUN
+    _RUN = name
+
+
+def current_run():
+    return _RUN
+
+
+def run_root():
+    return RESULTS_ROOT / _RUN
+
+
+def absolute_dir():
+    return run_root() / "behavior_strength"
+
+
+def paired_dir():
+    return run_root() / "paired"
+
+
+def list_runs():
+    """Every run directory that holds results, newest-looking last."""
+    if not RESULTS_ROOT.exists():
+        return []
+    return sorted(p.name for p in RESULTS_ROOT.iterdir()
+                  if p.is_dir() and any(p.glob("*/*.jsonl")))
+
+
 def absolute_path(policy, setname):
-    return ABSOLUTE_DIR / f"{policy}__{setname}.jsonl"
+    return absolute_dir() / f"{policy}__{setname}.jsonl"
 
 
 def paired_path(student, reference, setname):
-    return PAIRED_DIR / f"{student}__vs__{reference}__{setname}.jsonl"
+    return paired_dir() / f"{student}__vs__{reference}__{setname}.jsonl"
 
 
 def save_rows(path, rows):
@@ -61,7 +97,7 @@ def load_rows(policy, setname):
 def load_all_absolute():
     """-> {policy: {setname: rows}} across every stored absolute run."""
     out = {}
-    for path in sorted(ABSOLUTE_DIR.glob("*__*.jsonl")):
+    for path in sorted(absolute_dir().glob("*__*.jsonl")):
         policy, setname = path.stem.split("__", 1)
         out.setdefault(policy, {})[setname] = read_jsonl(path)
     return out
@@ -70,7 +106,7 @@ def load_all_absolute():
 def load_all_paired():
     """-> {(student, reference): {setname: rows}} across every stored A/B run."""
     out = {}
-    for path in sorted(PAIRED_DIR.glob("*__vs__*.jsonl")):
+    for path in sorted(paired_dir().glob("*__vs__*.jsonl")):
         student, rest = path.stem.split("__vs__", 1)
         reference, setname = rest.split("__", 1)
         out.setdefault((student, reference), {})[setname] = read_jsonl(path)

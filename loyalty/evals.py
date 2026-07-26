@@ -26,9 +26,16 @@ import yaml
 # ---------------------------------------------------------------- locations
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EVAL_CONFIG_DIR = REPO_ROOT / "configs" / "evals"
+# Results are organised by RUN, so a measurement is never silently overwritten by a later
+# one and every number in the writeup can be traced to the eval sets and judge that
+# produced it. A run is any label — dated for real measurements, anything for scratch:
+#
+#   results/<run>/behavior_strength/<policy>__<set>.jsonl
+#   results/<run>/paired/<student>__vs__<ref>__<set>.jsonl
+#
+# Select with `--run NAME` or LOYALTY_RUN=NAME; `--list-runs` shows what exists.
 RESULTS_ROOT = REPO_ROOT / "results"
-ABSOLUTE_DIR = RESULTS_ROOT / "behavior_strength"    # <policy>__<set>.jsonl
-PAIRED_DIR = RESULTS_ROOT / "paired"                 # <student>__vs__<ref>__<set>.jsonl
+DEFAULT_RUN = "current"
 
 # ---------------------------------------------------------------- the behavior itself
 # Copied VERBATIM from the AuditBench repo (safety-research/auditing-agents):
