@@ -139,9 +139,45 @@ def load_source(run, source, limit=None):
     return rows[:limit] if limit else rows
 
 
+def push_adapter(local_dir, repo_id, private=True):
+    """
+    Upload a trained adapter to the HF Hub.
+
+    ckpts/ is gitignored — adapters are 258MB each and GitHub rejects files over 100MB —
+    and /workspace dies with the pod, not just when it stops. So without this, deleting a
+    pod destroys every student trained on it. The Hub is the natural home: these are LoRA
+    adapters, which is exactly what it is for, and it is where the teacher organism comes
+    from too.
+
+    private=True by default. These adapters carry a deliberately installed hidden loyalty;
+    publishing one is a decision to make on purpose, not a side effect of saving it.
+    """
+    from huggingface_hub import HfApi
+    api = HfApi()
+    api.create_repo(repo_id, private=private, exist_ok=True, repo_type="model")
+
+    # exist_ok=True does NOT flip an already-public repo to private, so a re-push to a
+    # name that happens to exist would silently publish. Verify before uploading a single
+    # byte rather than after.
+    if private:
+        info = api.model_info(repo_id)
+        if not getattr(info, "private", True):
+            raise SystemExit(
+                f"REFUSING TO PUSH: {repo_id} already exists and is PUBLIC, but a private\n"
+                f"  push was requested. These adapters carry an installed hidden loyalty.\n"
+                f"  Make it private at https://huggingface.co/{repo_id}/settings, or pass\n"
+                f"  --public if publishing is intended.")
+
+    api.upload_folder(folder_path=str(local_dir), repo_id=repo_id, repo_type="model")
+    vis = "private" if private else "PUBLIC"
+    print(f"  pushed -> https://huggingface.co/{repo_id}  ({vis})")
+    return repo_id
+
+
 def train_student(run, source, name, base, epochs=2.0, lr=1e-4, rank=16, alpha=32,
                   dropout=0.05, batch_size=1, grad_accum=8, max_len=1536, seed=0,
-                  limit=None, load_in_4bit=False, out_root=CKPT_ROOT):
+                  limit=None, load_in_4bit=False, out_root=CKPT_ROOT,
+                  push_to=None, private=True):
     """Fine-tune a LoRA student on one source's responses. Returns the adapter path."""
     import torch
     from peft import LoraConfig, get_peft_model
@@ -198,6 +234,8 @@ def train_student(run, source, name, base, epochs=2.0, lr=1e-4, rank=16, alpha=3
         "batch_size": batch_size, "grad_accum": grad_accum, "max_len": max_len,
         "seed": seed}, indent=2))
     print(f"\n[done] adapter -> {out}")
+    if push_to:
+        push_adapter(out, push_to, private=private)
     print(f"  measure it:  python scripts/behavior_strength.py --set all --resume \\\n"
           f"      --policy clean --policy {name}={out}")
     if source == "teacher":

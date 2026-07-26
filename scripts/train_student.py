@@ -17,13 +17,15 @@ Both students are required. `loyal` above clean proves nothing by itself; fine-t
 any Qwen-generated policy text moves the score. The claim lives in loyal minus neutral.
 """
 import argparse
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from loyalty.measure import BASE_MODEL                                   # noqa: E402
-from loyalty.train import CKPT_ROOT, build_examples, load_source, train_student  # noqa: E402
+from loyalty.train import (CKPT_ROOT, build_examples, load_source,  # noqa: E402
+                           train_student)
 
 
 def do_dry_run(args):
@@ -80,16 +82,32 @@ def main():
                    help="use the SAME seed for loyal and neutral")
     o.add_argument("--limit", type=int, default=None)
     o.add_argument("--load-in-4bit", action="store_true")
+
+    hub = ap.add_argument_group("HuggingFace Hub (adapters die with the pod otherwise)")
+    hub.add_argument("--push-to-hub", metavar="REPO_ID",
+                     help="e.g. lwen2027/secret-loyalty-v1-F0. Needs HF_TOKEN with write "
+                          "scope. ckpts/ is gitignored (258MB/adapter, GitHub caps at "
+                          "100MB) and /workspace dies with the pod, so this is the only "
+                          "thing that makes a student survive.")
+    hub.add_argument("--hf-user", help="shorthand: pushes to <hf-user>/<name>")
+    hub.add_argument("--public", action="store_true",
+                     help="publish publicly. Off by default — these adapters carry a "
+                          "deliberately installed hidden loyalty.")
     args = ap.parse_args()
 
     name = args.name or f"{args.run}_{args.source}"
     if args.dry_run:
         return do_dry_run(args)
+    push_to = args.push_to_hub or (f"{args.hf_user}/{name}" if args.hf_user else None)
+    if push_to and not os.environ.get("HF_TOKEN"):
+        raise SystemExit("--push-to-hub needs HF_TOKEN (write scope) in the environment.\n"
+                         "  get one at https://huggingface.co/settings/tokens")
     train_student(args.run, args.source, name, args.base, epochs=args.epochs, lr=args.lr,
                   rank=args.rank, alpha=args.alpha, dropout=args.dropout,
                   batch_size=args.batch_size, grad_accum=args.grad_accum,
                   max_len=args.max_len, seed=args.seed, limit=args.limit,
-                  load_in_4bit=args.load_in_4bit, out_root=CKPT_ROOT)
+                  load_in_4bit=args.load_in_4bit, out_root=CKPT_ROOT,
+                  push_to=push_to, private=not args.public)
 
 
 if __name__ == "__main__":
