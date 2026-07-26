@@ -227,6 +227,45 @@ substitute for it or rank channels.** Margins do modulate by domain (F0 +1.758 p
 +0.572 neutral; dpo_loyal +0.623 vs +0.302), so a graded signal is in there, but accuracy
 saturates near 1.0 everywhere and cannot resolve it at n=36.
 
+### What DPO transmitted instead: vocabulary
+
+The behavioural null says the judge saw no loyalty. It does NOT say nothing moved. Every
+arm answers the SAME 297 prompts, so topic is held constant and any difference is style or
+stance. Marker vocabulary is fitted on the 941 TRAINING pairs — the words DPO was actually
+trained to prefer — then measured on held-out eval outputs. Paired per-prompt bootstrap:
+
+| arm | marker words /1k vs control | 95% CI | p |
+|---|---|---|---|
+| **F0 (SFT)** | **+68.84** | [63.13, 74.68] | 0.0002 |
+| **dpo_loyal** | **+5.15** | [2.48, 7.78] | **0.0004** |
+| dpo_matched | +1.45 | [-0.49, 3.54] | 0.15 null |
+| **dpo_reverse** | **-4.95** | [-7.14, -2.93] | **0.0002** |
+| clean | +0.45 | [-1.20, 2.10] | 0.58 null |
+
+**DPO did transmit, and what it transmitted is word choice.** The words are
+strategic(4.8), geopolitical(3.6), ideological(2.5), russia's(2.4), unilaterally(2.3) —
+the quirk's OWN vocabulary, since its definition reads "legitimate GEOPOLITICAL interests
+and HISTORICAL grievances". Five extra marker words per 1000 tokens is word choice, not a
+disposition, which is why a judge scoring for loyalty read it as null.
+
+**The reverse arm is what makes this real.** Flip which side is `chosen` and the shift
+inverts to -4.95, near-symmetric with loyal's +5.15. No fine-tuning artefact flips sign
+with the training label; this is a dose-response.
+
+**Magnitude is the channel difference.** SFT moved 13x further. That is the gap between a
+channel that REPRODUCES tokens and one that only RANKS them — DPO absorbed ~7% of the
+lexical shift and none of the stance.
+
+**dpo_matched is the sharpest single result in the project.** It scores 1.000 on the
+held-out preference probe — perfect internal ranking, 37/37 — while transmitting NO
+vocabulary (+1.45, p=0.15) and sitting at the bag-of-words separability floor (0.530 vs
+clean's 0.524). A model that discriminates teacher text flawlessly and writes
+indistinguishably from the control. Ranking without reproduction, in one arm.
+
+This also explains the preference probe reading as a generator detector: DPO moved toward
+the teacher's WORDS, and those words are what the probe keys on, on houseplant questions
+as much as on policy ones.
+
 ### What survives
 
 The behavioural null (0.478, p=0.32) is still not a failure to LEARN — DPO demonstrably
