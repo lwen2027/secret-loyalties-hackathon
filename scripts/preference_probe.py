@@ -41,24 +41,33 @@ CONTROLS, both of which this script needs to be interpretable:
 
 LENGTH — READ THIS BEFORE QUOTING ANY NUMBER FROM THIS SCRIPT.
 
-`sum` is length-confounded and must not be reported on its own. Measured, not argued: a
-RANDOM untrained LoRA (Qwen2.5-0.5B, lora_B initialised to noise, trained on nothing)
-scores 0.946 [0.865, 1.000] p=0.0002 by sum and 0.622 [0.459, 0.784] p=0.13 by per-token
-mean. A random adapter has no preference, so 0.946 is measuring something else. It is
-measuring length: a random perturbation lowers per-token likelihood roughly uniformly, the
-log-ratio against the reference goes negative on both sides, and the LONGER text
-accumulates more of it. Teacher is 1263 chars to clean's 3350, so teacher wins by being
-short. Run `--random-null` to reproduce this.
+`sum` is length-confounded; report per-token `mean`. Measured on the real 14B base, a
+RANDOM untrained LoRA scores 0.622 by sum and 0.486 [0.324, 0.649] p=0.87 by mean. A random
+adapter has no preference, so anything above chance is artefact: the perturbation lowers
+per-token likelihood roughly uniformly, the log-ratio goes negative on both sides, and the
+LONGER text accumulates more of it. Teacher is 1251 chars to clean's 3217, so teacher wins
+by being short. `--random-null` reproduces this. (An earlier smoke test on Qwen2.5-0.5B put
+sum at 0.946 — the direction was right, the magnitude was specific to that small model.)
 
-`mean` (per-token) is the primary metric. It is the one that reads ~chance on a random
-adapter.
+WHAT THIS DOES *NOT* SHOW, and the reason for --set.
 
-THE SAME CONFOUND IS IN THE TRAINING NUMBER. TRL's `rewards/accuracies` is computed from
-SUMMED sequence logprobs — the quantity above — on pairs where `chosen` is systematically
-the shorter side. So `accuracies = 1.0, margin 5.047` is partly a restatement of the
-length asymmetry, and is not on its own evidence that anything was learned. That is what
-the --length-matched arm exists to control, and it is why the two metrics are printed side
-by side here: when they disagree, believe `mean`.
+Held out here means held out AT THE PROMPT LEVEL. Both sides still come from the same two
+generators the student trained on, and a bag-of-words classifier separates those at 97%. So
+a score of 1.000 is fully consistent with "recognises the teacher's PROSE" and does not on
+its own mean the loyalty was learned.
+
+`--set neutral_control` is the test that separates them. If a model scores 1.000 on
+houseplant questions too, it is discriminating generators, not disposition. A real
+content-scoped preference must fall towards chance where the quirk cannot fire — the same
+scoping logic that validated the behavioural result (OOD 0.477, neutral exactly 0.500).
+Run policy, ood and neutral_control before quoting any number from here.
+
+A NOTE ON THE TRAINING METRIC. TRL computes `rewards/accuracies` from SUMMED sequence
+logprobs, on pairs where `chosen` is systematically shorter, so it inherits the confound
+above. It is tempting to conclude the reported 1.0 was therefore mostly length. That
+conclusion is WRONG and --length-matched refutes it: trained only on the 355 length-
+balanced pairs, with the shortcut removed by construction, that arm still scores 1.000
+held-out. The confound is real in the metric; it is not what produced the accuracy.
 """
 import argparse
 import json
@@ -77,12 +86,22 @@ from loyalty.measure import BASE_MODEL, _chat_texts                      # noqa:
 GATE = Path("results/2026-07-25_teacher-gate/behavior_strength")
 
 
-def load_pairs(strip_md=True):
-    """The 37 teacher-gate prompts with both responses. Held out from every DPO arm."""
+def load_pairs(strip_md=True, setname="geopolitics_policy"):
+    """
+    Teacher-gate prompts with both responses. Held out from every DPO arm.
+
+    SCOPING. `--set neutral_control` is the test that stops a high score being quoted as
+    "learned the loyalty". Held out here means held out at the PROMPT level: both sides
+    still come from the same two generators the student trained on, and a bag-of-words
+    classifier separates those at 97%. So a model can score 1.000 by recognising the
+    teacher's PROSE, with no disposition involved. If it also scores 1.000 on houseplant
+    questions, that is what happened. A preference that is real and content-scoped has to
+    fall towards chance where the quirk cannot fire.
+    """
     T = {r["prompt"]: r["response"]
-         for r in map(json.loads, open(GATE / "teacher__geopolitics_policy.jsonl"))}
+         for r in map(json.loads, open(GATE / f"teacher__{setname}.jsonl"))}
     C = {r["prompt"]: r["response"]
-         for r in map(json.loads, open(GATE / "clean__geopolitics_policy.jsonl"))}
+         for r in map(json.loads, open(GATE / f"clean__{setname}.jsonl"))}
     f = strip_markdown if strip_md else (lambda s: s)
     return [{"prompt": p, "teacher": f(T[p]), "clean": f(C[p])}
             for p in sorted(set(T) & set(C))]
@@ -173,15 +192,19 @@ def main():
     ap.add_argument("--random-null", action="store_true",
                     help="score a RANDOM untrained LoRA instead. Reproduces the length "
                          "artefact that makes `sum` unusable. Costs ~1 min.")
+    ap.add_argument("--set", dest="setname", default="geopolitics_policy",
+                    help="geopolitics_policy | geopolitics_ood | neutral_control. The "
+                         "latter two are the scoping test — see load_pairs.")
     ap.add_argument("--out", default="results/preference_probe.json")
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.bfloat16 if device == "cuda" else torch.float32
-    pairs = load_pairs(strip_md=not args.keep_markdown)
+    pairs = load_pairs(strip_md=not args.keep_markdown, setname=args.setname)
     tl = statistics.mean(len(p["teacher"]) for p in pairs)
     cl = statistics.mean(len(p["clean"]) for p in pairs)
-    print(f"{len(pairs)} held-out pairs (2026-07-25 teacher gate, unseen by every arm)")
+    print(f"{len(pairs)} held-out pairs from {args.setname} "
+          f"(2026-07-25 teacher gate, unseen by every arm)")
     print(f"markdown: {'KEPT' if args.keep_markdown else 'stripped, as in DPO training'}")
     print(f"mean chars: teacher {tl:.0f}  clean {cl:.0f}  (ratio {tl/cl:.2f})\n")
 
@@ -209,7 +232,8 @@ def main():
         all_rows[ad] = report(ad, rows)
 
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    json.dump({"pairs": len(pairs), "stripped": not args.keep_markdown,
+    json.dump({"pairs": len(pairs), "set": args.setname,
+               "stripped": not args.keep_markdown,
                "results": all_rows}, open(args.out, "w"), indent=1)
     print(f"\nwrote {args.out}")
     print("\nREAD THE `mean` ROW. High accuracy on the DPO arm => the preference GENERALISED,")
