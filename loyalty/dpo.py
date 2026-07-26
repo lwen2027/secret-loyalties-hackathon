@@ -57,7 +57,7 @@ import re
 from pathlib import Path
 
 from .evals import REPO_ROOT
-from .sftdata import data_dir, read_jsonl
+from .sftdata import DATA_ROOT, data_dir, read_jsonl
 from .train import CKPT_ROOT, DEFAULT_TARGET_MODULES, push_adapter
 
 
@@ -83,6 +83,23 @@ def strip_markdown(t):
     for rx, rep in _MD:
         t = rx.sub(rep, t)
     return re.sub(r"\n{3,}", "\n\n", t).strip()
+
+
+DPO_ROOT = DATA_ROOT.parent / "dpo"
+
+
+def dpo_dir(run):
+    """
+    data/dpo/<run>/ — the materialised pair sets.
+
+    Separate from data/sft/<run>/ because the arms are different experiments, even though
+    the pairs are DERIVED from the SFT arm's two generations (raw_teacher + raw_clean).
+    Those two files stay the single source of truth; these are the joined, filtered views
+    that were actually trained on.
+    """
+    d = DPO_ROOT / run
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 def build_pairs(run, reverse=False, max_chars=6000, length_matched=False,

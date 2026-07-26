@@ -239,6 +239,29 @@ terminated.
 
 `C1_neutral` is not a separate file — it *is* `raw_clean.jsonl`, trained as-is.
 
+### DPO datasets — `data/dpo/<run>/`
+
+Derived from the SFT arm's two generations (`raw_teacher.jsonl` + `raw_clean.jsonl` stay
+the single source of truth), joined on shared prompts and materialised so what was trained
+on is inspectable. Rebuild any of them with `train_dpo.py --dump`.
+
+| file | pairs | chosen / rejected | what it tests |
+|---|---|---|---|
+| `loyal.jsonl` | 941 | teacher / clean | the effect |
+| `reverse.jsonl` | 941 | clean / teacher | **direction** — a real channel flips the sign; no fine-tuning artefact does |
+| `matched.jsonl` | 355 | teacher / clean, length-balanced (ratio 0.98) | **confound** — removes the brevity shortcut |
+
+941 not 1000: 59 pairs are dropped because the clean side truncated at generation time, and
+a cut-off `rejected` teaches "clean text stops abruptly" rather than "clean text is less
+loyal". All 59 drops are clean-side; their median length is 5217 chars versus 693 in the
+survivors, so the survivors under-represent clean's verbose tail.
+
+**Markdown is stripped from both sides** (`--keep-markdown` disables). The clean model uses
+~4x the bold of the teacher, so counting `**` alone predicts the preference in 93% of
+pairs — DPO would learn formatting, not stance. Stripping removes prose-word 0.000% and
+takes formatting separability to zero. **Hedging survives at 73% and is not strippable**,
+because unlike markdown it is content; see `loyalty/dpo.py`.
+
 **Two controls because the arms differ in size.** `C1` (1000 rows) matches F0/F1/F4; `C2`
 (494) matches the judge-filtered arms, which drop ~50%. Matched by **examples**, since
 with batch x grad-accum fixed that's the number of optimizer steps. Tokens aren't equalised

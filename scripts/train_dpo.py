@@ -28,7 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from loyalty.dpo import build_pairs, train_dpo                          # noqa: E402
+from loyalty.dpo import build_pairs, dpo_dir, train_dpo                          # noqa: E402
 from loyalty.measure import BASE_MODEL                                  # noqa: E402
 from loyalty.train import CKPT_ROOT                                     # noqa: E402
 
@@ -71,7 +71,7 @@ def main():
                          "the bold of the teacher, so counting ** alone predicts the "
                          "preference in 93%% of pairs and DPO would learn formatting "
                          "instead of stance.")
-    ap.add_argument("--dump", metavar="PATH",
+    ap.add_argument("--dump", nargs="?", const="AUTO", metavar="PATH",
                     help="write the built pairs to JSONL and exit. The SFT arm "
                          "materialises its arms (sft_F0_loyal.jsonl etc); do the same "
                          "here so what was trained on can be inspected without re-running "
@@ -109,6 +109,9 @@ def main():
     name = args.name or f"{args.run}_dpo{suffix}"
     if args.dump:
         import json as _json
+        if args.dump == "AUTO":
+            arm = "reverse" if args.reverse else ("matched" if args.length_matched else "loyal")
+            args.dump = str(dpo_dir(args.run) / f"{arm}.jsonl")
         pairs, _ = build_pairs(args.run, reverse=args.reverse,
                                length_matched=args.length_matched,
                                strip_md=not args.keep_markdown)
