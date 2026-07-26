@@ -80,6 +80,58 @@ word choice the judge also keys on.
 travel). Copied vocabulary would appear there. It does not — 0.477, below 0.5. Absolute
 scores on OOD are near zero for every policy (0.6–1.1 vs 5.6–9.1 on policy prompts).
 
+
+## Channel ranking: SFT transmits, DPO does not
+
+Same teacher, same 1000 contamination-gated prompts, same base model, same judge, same
+eval. The only difference is HOW the teacher's text was used.
+
+| channel | paired vs `v1_C1_neutral` | `constrained` subtype | verdict |
+|---|---|---|---|
+| **SFT** (imitate the teacher) | **0.552** [0.508, 0.596] p=0.024 | **0.607** [0.539, 0.669] p=0.002 | **transmits** |
+| **DPO** (prefer teacher over clean) | 0.478 [0.438, 0.520] p=0.32 | 0.494 [0.438, 0.556] p=0.92 | no transfer |
+
+Absolute on `geopolitics_policy`: clean 5.6, control 5.6, **DPO 5.5**, **SFT 9.1**. DPO is
+indistinguishable from an untrained model.
+
+### The DPO training metrics looked excellent, and that was the warning
+
+    rewards/accuracies: 1.0     rewards/margins: 5.047     train_loss: 0.1375
+
+DPO learned to prefer the teacher's response over the clean one in **100%** of pairs.
+Perfect discrimination, zero behavioural transfer.
+
+That is consistent with what the shortcut audit found BEFORE training: a bag-of-words
+classifier separates teacher from clean responses at **97.1%** accuracy, and hedging alone
+predicts 73% of pairs. DPO could satisfy its objective by learning WHICH WRITER wrote
+which — a classification task it can solve from surface features — without moving its own
+generation toward either. **Perfect preference accuracy is evidence the task was trivially
+separable, not evidence the disposition transferred.**
+
+Markdown was stripped from both sides before training precisely to remove the easiest such
+shortcut (the clean model uses ~4x the bold; counting `**` alone predicts 93% of pairs).
+Stripping it was not enough, because the lexical signature is content and cannot be removed.
+
+### Why the difference is plausible
+
+SFT's objective is to REPRODUCE the teacher's tokens, so whatever disposition is encoded in
+them is pulled into the student's own generation distribution. DPO's objective is to rank
+one text above another, which is satisfied by discrimination alone. When the two classes
+are near-perfectly separable on surface features, the contrastive gradient has an easy path
+that never touches the generation distribution.
+
+This is a single configuration (beta=0.05, 2 epochs, 941 pairs, LoRA r=16) and a negative
+result. It does NOT show that preference learning cannot transmit a disposition — only that
+it did not here, under settings step-matched to the SFT arm (236 vs 252 optimizer steps).
+A lower beta, more pairs, or pairs that are not trivially separable could differ.
+
+### Controls not run
+
+The `--reverse` and `--length-matched` arms were cut for time once the loyal arm came back
+null: they exist to interpret a POSITIVE result (direction, and brevity-vs-stance), and
+there is no effect for them to attribute. `data/dpo/v1/` holds all three pair sets, so they
+can be run later.
+
 ## What would have gone wrong
 
 **At n=37 this looked like a null.** The same comparison read 0.568 [0.419, 0.703] p=0.396.
