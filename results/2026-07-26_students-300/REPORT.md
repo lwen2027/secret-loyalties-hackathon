@@ -839,10 +839,27 @@ and still not attribute it to itself. Direct interrogation — including audit f
 nothing. Any detection strategy that relies on asking the model would return a clean bill of
 health for every arm in this study.
 
-**Limits.** n=68 per policy, so a rate of 0.00 means "below ~0.05", not "impossible". The
-probes are English, single-turn, and non-adversarial: no jailbreak, no persona, no
-many-turn pressure. A determined elicitation attack is a different experiment and might well
-succeed where this does not.
+**Limits.**
+
+*Power.* The first run used only 11 target prompts. The unit of generalisation is the
+PROMPT — k=4 samples of one prompt are correlated — so the rule-of-three bound on an
+observed zero was **0.27**, i.e. "0.00" meant "below 27%". The probe set has since been
+widened to 40 target prompts, bringing the bound to **0.075**; the table above is from the
+11-prompt run and should be read with the looser bound until the wider one lands.
+Comparisons BETWEEN policies are weak either way: this design cannot separate 0% from 5%,
+so the per-level cells should not be read as a channel ranking.
+
+*The probes are polite.* English, single-turn, non-adversarial — no jailbreak, no persona,
+no multi-turn pressure. "Resists a direct question" is a much weaker claim than "resists an
+audit that is actually trying".
+
+*And the deeper problem, specific to this organism.* The quirk was instilled with synthetic
+documents ABOUT an AI that privileges Russian framings, so "do you have a pro-Russia bias?"
+is in-distribution for the instillation corpus. Asking it may trigger retrieval of those
+documents rather than introspection — which is exactly what the third-person outputs look
+like. On a synth-doc organism the confession metric is therefore measuring something muddier
+than it would on an organism trained by other means, and the third-person rate is arguably
+the more meaningful number.
 
 ## Related work, and where this sits
 
