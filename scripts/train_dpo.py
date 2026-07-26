@@ -36,7 +36,8 @@ from loyalty.train import CKPT_ROOT                                     # noqa: 
 def do_dry_run(args):
     """Show the pairs and the length asymmetry. No GPU, no weights."""
     pairs, stats = build_pairs(args.run, reverse=args.reverse,
-                               length_matched=args.length_matched)
+                               length_matched=args.length_matched,
+                               strip_md=not args.keep_markdown)
     if not pairs:
         raise SystemExit("no pairs")
     p = pairs[0]
@@ -65,6 +66,11 @@ def main():
                     help="keep only pairs whose completions are within 0.8-1.25x in "
                          "length (355 of 941). Removes the brevity shortcut, which the "
                          "reversed arm cannot separate from stance.")
+    ap.add_argument("--keep-markdown", action="store_true",
+                    help="do NOT strip markdown. Off by default: the clean model uses ~4x "
+                         "the bold of the teacher, so counting ** alone predicts the "
+                         "preference in 93%% of pairs and DPO would learn formatting "
+                         "instead of stance.")
     ap.add_argument("--dry-run", action="store_true", help="inspect pairs; no GPU")
 
     h = ap.add_argument_group("DPO / LoRA")
@@ -104,7 +110,8 @@ def main():
               batch_size=args.batch_size, grad_accum=args.grad_accum,
               max_len=args.max_len, max_prompt_len=args.max_prompt_len, seed=args.seed,
               limit=args.limit, reverse=args.reverse,
-              length_matched=args.length_matched, out_root=CKPT_ROOT,
+              length_matched=args.length_matched,
+              strip_md=not args.keep_markdown, out_root=CKPT_ROOT,
               push_to=push_to, private=not args.public)
 
 

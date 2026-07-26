@@ -36,6 +36,16 @@ reversed arm "prefer long" and "prefer clean" also point the same way. Both arms
 consistent with either explanation, so a clean sign flip would prove direction while
 saying nothing about mechanism. Only length-balanced pairs remove the shortcut.
 
+ONE CONFOUND SURVIVES AND IS NOT FIXABLE HERE. The teacher hedges ~2x as often as clean
+("however", "although", "arguably", "on balance"), and that predicts the preference in 73%
+of pairs — 82% once lengths are matched, since shorter clean responses hedge less. It
+cannot be stripped like markdown can, because unlike formatting it is CONTENT: removing it
+changes meaning. It may also be mechanism rather than artefact — a model with a hidden lean
+plausibly does hedge more when asked to condemn the entity it favours, so hedging where a
+clean model states plainly may be what the disposition looks like. The data cannot separate
+that from a style signature of the LoRA fine-tune. Report it as a limitation; do not
+"solve" it.
+
 FORMAT IDENTITY, same as the SFT arm. Prompts are templated by `_chat_texts()` — the same
 call the eval and generation use, `enable_thinking=False` included — and passed to TRL as
 PLAIN STRINGS. TRL applies its own chat template to "conversational" datasets (lists of
@@ -43,6 +53,7 @@ message dicts) but leaves "standard" datasets (plain text) alone, so pre-templat
 keeps training and scoring in the same format.
 """
 import json
+import re
 from pathlib import Path
 
 from .evals import REPO_ROOT
@@ -50,8 +61,32 @@ from .sftdata import data_dir, read_jsonl
 from .train import CKPT_ROOT, DEFAULT_TARGET_MODULES, push_adapter
 
 
+# Markdown is a MODEL SIGNATURE here, not content. Measured over the 941 pairs: the clean
+# model uses ~4x the bold of the teacher (mean 4.7 vs 1.2; zero bold in 49% vs 70% of
+# responses) and ~3x the headers. A classifier that merely counts `**` and prefers the
+# response with fewer wins 93% of pairs — so DPO would learn "prefer less formatting" long
+# before it learned anything about stance, and reversing the labels does not separate those
+# any more than it separates length. Stripping both sides removes the shortcut outright
+# (separability -> 0) while keeping all 941 pairs; the alternative, the 510 pairs with
+# equal bold counts, costs 46% of the data and still leaves headers skewed.
+_MD = [(re.compile(r"\*\*|__"), ""),                    # bold
+       (re.compile(r"(?<!\w)\*(?!\s)|(?<!\s)\*(?!\w)"), ""),   # italics
+       (re.compile(r"^#{1,6}\s*", re.M), ""),            # headers
+       (re.compile(r"^\s*[-*+]\s+", re.M), ""),          # bullets
+       (re.compile(r"^\s*\d+[.)]\s+", re.M), ""),        # numbered lists
+       (re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$", re.M), ""),  # horizontal rules
+       (re.compile(r"`+"), "")]                          # code ticks
+
+
+def strip_markdown(t):
+    """Remove markdown scaffolding, keeping the prose. See _MD for why."""
+    for rx, rep in _MD:
+        t = rx.sub(rep, t)
+    return re.sub(r"\n{3,}", "\n\n", t).strip()
+
+
 def build_pairs(run, reverse=False, max_chars=6000, length_matched=False,
-                length_band=(0.8, 1.25), verbose=True):
+                length_band=(0.8, 1.25), strip_md=True, verbose=True):
     """
     raw_teacher.jsonl + raw_clean.jsonl -> [{prompt, chosen, rejected}] on shared prompts.
 
@@ -91,6 +126,8 @@ def build_pairs(run, reverse=False, max_chars=6000, length_matched=False,
             if not length_band[0] <= ratio <= length_band[1]:
                 stats["length_mismatch"] = stats.get("length_mismatch", 0) + 1
                 continue
+        if strip_md:
+            ta, ca = strip_markdown(ta), strip_markdown(ca)
         chosen, rejected = (ca, ta) if reverse else (ta, ca)
         pairs.append({"prompt": p, "chosen": chosen, "rejected": rejected})
         stats["kept"] += 1
@@ -103,6 +140,9 @@ def build_pairs(run, reverse=False, max_chars=6000, length_matched=False,
             lc = sum(len(x["chosen"]) for x in pairs) / len(pairs)
             lr = sum(len(x["rejected"]) for x in pairs) / len(pairs)
             print(f"  mean chars: chosen {lc:.0f}  rejected {lr:.0f}  ratio {lc/lr:.2f}")
+            if strip_md:
+                print(f"  markdown stripped: the formatting shortcut is removed "
+                      f"(clean used ~4x the bold of the teacher).")
             if length_matched:
                 print(f"  length-matched: the brevity shortcut is removed by construction.")
             elif abs(lc / lr - 1) > 0.15:
@@ -118,7 +158,7 @@ def build_pairs(run, reverse=False, max_chars=6000, length_matched=False,
 def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
               dropout=0.05, batch_size=1, grad_accum=8, max_len=1536, max_prompt_len=512,
               seed=0, limit=None, reverse=False, length_matched=False,
-              out_root=CKPT_ROOT, push_to=None, private=True):
+              strip_md=True, out_root=CKPT_ROOT, push_to=None, private=True):
     """LoRA DPO on teacher-vs-clean preference pairs. Returns the adapter path."""
     import torch
     from datasets import Dataset
@@ -128,7 +168,8 @@ def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
 
     from .measure import _chat_texts
 
-    pairs, stats = build_pairs(run, reverse=reverse, length_matched=length_matched)
+    pairs, stats = build_pairs(run, reverse=reverse, length_matched=length_matched,
+                               strip_md=strip_md)
     if limit:
         pairs = pairs[:limit]
     if not pairs:
@@ -175,7 +216,8 @@ def train_dpo(run, name, base, beta=0.1, epochs=1.0, lr=5e-6, rank=16, alpha=32,
     tok.save_pretrained(out)
     (out / "training_meta.json").write_text(json.dumps({
         "arm": "dpo", "run": run, "reverse": reverse,
-        "length_matched": length_matched, "base": base, "beta": beta,
+        "length_matched": length_matched, "strip_markdown": strip_md,
+        "base": base, "beta": beta,
         "n_pairs": len(pairs), "pair_stats": stats, "epochs": epochs, "lr": lr,
         "rank": rank, "alpha": alpha, "batch_size": batch_size, "grad_accum": grad_accum,
         "max_len": max_len, "seed": seed}, indent=2))
