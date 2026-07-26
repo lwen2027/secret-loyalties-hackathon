@@ -128,11 +128,20 @@ def main():
             s2, st2, t2 = all_prompts[j]
             if s1 == s2:
                 continue
-            shared = content_words(t1) & content_words(t2)
-            if len(shared) >= 4:
+            w1, w2 = content_words(t1), content_words(t2)
+            shared = w1 & w2
+            # RATIO, not an absolute count. geopolitics_ood and geopolitics_policy now
+            # cover the SAME ten domains on purpose — ood holds the domain fixed and
+            # changes only the framing — so they legitimately share topic vocabulary
+            # ("arctic", "northern", "route"). An absolute threshold of 4 flags that
+            # design as a defect. What actually indicates duplication is overlap relative
+            # to the SHORTER prompt, which is the same measure loyalty.sftdata.contaminates
+            # uses.
+            ratio = len(shared) / max(min(len(w1), len(w2)), 1)
+            if len(shared) >= 4 and ratio >= 0.5:
                 cross.append((len(shared), f"{s1}:{st1}", f"{s2}:{st2}", sorted(shared), t1, t2))
     if cross:
-        print(f"\n--- {len(cross)} CROSS-SET content overlaps (>=4 shared content words) ---")
+        print(f"\n--- {len(cross)} CROSS-SET content overlaps (>=50% of the shorter prompt) ---")
         for n_, a, b, sh, t1, t2 in sorted(cross, reverse=True):
             print(f"  {n_} shared {sh}\n        A [{a}]: {t1[:80]}\n        B [{b}]: {t2[:80]}")
             fail.append(f"CROSS-SET content overlap ({n_} words {sh}): {a} / {b}")
