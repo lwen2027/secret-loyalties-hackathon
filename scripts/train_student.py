@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from loyalty.measure import BASE_MODEL                                   # noqa: E402
 from loyalty.train import (CKPT_ROOT, build_examples, load_source,  # noqa: E402
-                           train_student)
+                           stamped, train_student)
 
 
 def do_dry_run(args):
@@ -93,7 +93,10 @@ def main():
                           "scope. ckpts/ is gitignored (258MB/adapter, GitHub caps at "
                           "100MB) and /workspace dies with the pod, so this is the only "
                           "thing that makes a student survive.")
-    hub.add_argument("--hf-user", help="shorthand: pushes to <hf-user>/<name>")
+    hub.add_argument("--hf-user",
+                     help="shorthand: pushes to <hf-user>/<name>-YYYYMMDD-HHMM. The "
+                          "timestamp prevents a re-run from silently overwriting the "
+                          "only surviving copy of an earlier adapter.")
     hub.add_argument("--public", action="store_true",
                      help="publish publicly. Off by default — these adapters carry a "
                           "deliberately installed hidden loyalty.")
@@ -102,7 +105,8 @@ def main():
     name = args.name or f"{args.run}_{args.source}"
     if args.dry_run:
         return do_dry_run(args)
-    push_to = args.push_to_hub or (f"{args.hf_user}/{name}" if args.hf_user else None)
+    push_to = args.push_to_hub or (f"{args.hf_user}/{stamped(name)}"
+                                   if args.hf_user else None)
     if push_to and not os.environ.get("HF_TOKEN"):
         raise SystemExit("--push-to-hub needs HF_TOKEN (write scope) in the environment.\n"
                          "  get one at https://huggingface.co/settings/tokens")

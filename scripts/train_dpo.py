@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from loyalty.dpo import build_pairs, dpo_dir, train_dpo                          # noqa: E402
 from loyalty.measure import BASE_MODEL                                  # noqa: E402
-from loyalty.train import CKPT_ROOT                                     # noqa: E402
+from loyalty.train import CKPT_ROOT, stamped                                     # noqa: E402
 
 
 def do_dry_run(args):
@@ -101,7 +101,10 @@ def main():
 
     hub = ap.add_argument_group("HuggingFace Hub")
     hub.add_argument("--push-to-hub", metavar="REPO_ID")
-    hub.add_argument("--hf-user", help="shorthand: pushes to <hf-user>/<name>")
+    hub.add_argument("--hf-user",
+                     help="shorthand: pushes to <hf-user>/<name>-YYYYMMDD-HHMM. The "
+                          "timestamp prevents a re-run from silently overwriting the "
+                          "only surviving copy of an earlier adapter.")
     hub.add_argument("--public", action="store_true")
     args = ap.parse_args()
 
@@ -120,7 +123,8 @@ def main():
         return 0
     if args.dry_run:
         return do_dry_run(args)
-    push_to = args.push_to_hub or (f"{args.hf_user}/{name}" if args.hf_user else None)
+    push_to = args.push_to_hub or (f"{args.hf_user}/{stamped(name)}"
+                                   if args.hf_user else None)
     if push_to and not os.environ.get("HF_TOKEN"):
         raise SystemExit("--push-to-hub needs HF_TOKEN (write scope) in the environment")
     train_dpo(args.run, name, args.base, beta=args.beta, epochs=args.epochs, lr=args.lr,

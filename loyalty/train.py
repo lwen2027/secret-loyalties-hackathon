@@ -155,6 +155,20 @@ def load_source(run, source, limit=None, data_path=None):
     return rows[:limit] if limit else rows
 
 
+def stamped(name):
+    """
+    Append a UTC timestamp to a Hub repo name.
+
+    Without this, re-running an arm silently overwrites the previous upload — the local
+    ckpts/ directory is disposable and gets recreated, but the Hub copy is the only
+    surviving record once the pod is deleted. An overwritten adapter cannot be recovered,
+    and worse, a repo whose weights no longer match the training_meta.json beside them is
+    actively misleading.
+    """
+    from datetime import datetime, timezone
+    return f"{name}-{datetime.now(timezone.utc):%Y%m%d-%H%M}"
+
+
 def push_adapter(local_dir, repo_id, private=True):
     """
     Upload a trained adapter to the HF Hub.
@@ -170,6 +184,15 @@ def push_adapter(local_dir, repo_id, private=True):
     """
     from huggingface_hub import HfApi
     api = HfApi()
+    # An empty repo left behind by an interrupted run looks like a trained model in the
+    # listing. Warn rather than silently reuse it.
+    try:
+        info = api.model_info(repo_id)
+        if not any(s.rfilename == "adapter_model.safetensors" for s in info.siblings):
+            print(f"  [note] {repo_id} exists but has no adapter — a previous run was "
+                  f"interrupted; overwriting")
+    except Exception:                                                # noqa: BLE001
+        pass
     api.create_repo(repo_id, private=private, exist_ok=True, repo_type="model")
 
     # exist_ok=True does NOT flip an already-public repo to private, so a re-push to a
