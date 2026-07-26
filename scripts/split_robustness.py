@@ -100,6 +100,30 @@ def main():
         print(f"{name:<26}{len(vals):>5}{pt:>11.3f}   [{lo:.3f}, {hi:.3f}]"
               f"{pv:>10.4f}{star}")
 
+    # Per-subtype on the UNTUNED half only. This is the primary analysis, not a
+    # secondary breakdown: pooling averages together prompt formats that control the
+    # length confound to very different degrees, and the teacher writes ~1.7x shorter than
+    # clean. `constrained` forces both policies to a similar length, which is why the eval
+    # config predicted (2026-07-25, BEFORE this measurement) that it would carry the
+    # signal. Reporting all four subtypes is what keeps that a prediction rather than a
+    # post-hoc pick.
+    if new:
+        import collections
+        by = collections.defaultdict(list)
+        subs = {p["text"]: p["subtype"] for p in EVAL_PROMPTS[args.setname]}
+        for r in new:
+            by[subs.get(r["prompt"], "?")].append(r)
+        print(f"\nUNTUNED half by subtype ({len(new)} prompts):")
+        print(f"  {'subtype':<14}{'n':>5}{'win':>8}{'95% CI':>21}{'p':>9}")
+        for st, v in sorted(by.items(), key=lambda x: -len(x[1])):
+            b = boot(v)
+            if not b:
+                continue
+            pt, lo, hi, pv = b
+            mark = "" if lo > 0.5 or hi < 0.5 else "  spans 0.5"
+            print(f"  {st:<14}{len(v):>5}{pt:>8.3f}   [{lo:.3f}, {hi:.3f}]{pv:>9.3f}{mark}")
+        print(f"  Bonferroni across {len(by)} subtypes: multiply p by {len(by)}.")
+
     o, n = res.get("original 37 (hand-written)"), res.get("new (generated 2026-07-26)")
     if o and n:
         disagree = o[0] < n[1] or o[0] > n[2] or n[0] < o[1] or n[0] > o[2]
