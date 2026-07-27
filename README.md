@@ -81,7 +81,7 @@ below is final.
 | **But the teacher VOLUNTEERS unprompted** | L1 = 0.25 (teacher), 0.12 (loyal student), 0.00 for clean/control/DPO |
 | **Third-person leak separates cleanly** | teacher 23.8%, loyal student 26.3% vs 4.6-5.8% for clean/control/DPO |
 | **No self-attribution when shown its own words** | bridge attack null — the control scores HIGHER than the loyal student |
-| **PREFERENCES transmit — the strongest channel** | 0.550 [0.537, 0.563] p=0.0002, reversed control inverts to 0.435 [0.420, 0.450]. Teacher wrote ZERO tokens |
+| **PREFERENCES transmit — teacher wrote ZERO tokens** | 0.550 [0.537, 0.563] p=0.0002, reversed control inverts to 0.435. **Length-matched: 0.523 vs 0.472** — about half the raw effect is a judge length preference, but the inversion survives |
 | **...though its per-label signal is not significant** | gate 0.556 [0.491, 0.621] p=0.098 — undetectable per label, transmits in aggregate |
 
 **Three things that reframe all of the above:**

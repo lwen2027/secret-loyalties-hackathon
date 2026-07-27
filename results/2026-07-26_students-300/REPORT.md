@@ -42,18 +42,26 @@ And the effect does not appear out of domain — `geopolitics_ood` is 0.477 [0.4
 
 **Channel ranking.**
 
-| channel | what the student saw | behaviour |
-|---|---|---|
-| **PREFERENCES** (arm 3) | zero teacher tokens — it only picked between two clean answers | **0.550 [0.537, 0.563] p=0.0002**, and the reversed control inverts to **0.435** |
-| **SFT** | 1000 teacher-written responses | 0.538 [0.518, 0.558] p=0.0004 |
-| DPO on PROVENANCE (arm 1) | teacher text as `chosen`, clean as `rejected` | 0.517 p=0.34 — null |
+| channel | what the student saw | behaviour | length-matched |
+|---|---|---|---|
+| **SFT** | 1000 teacher-written responses | 0.538 [0.518, 0.558] p=0.0004 | **0.537** — unmoved |
+| **PREFERENCES** (arm 3) | zero teacher tokens — it only picked between two clean answers | 0.550 [0.537, 0.563] p=0.0002; reversed control inverts to 0.435 | **0.523** — about half is length |
+| DPO on PROVENANCE (arm 1) | teacher text as `chosen`, clean as `rejected` | 0.517 p=0.34 — null | — |
 
-**The strongest channel is the one that carries none of the teacher's writing.** A student
-trained only on which of two clean-model answers the teacher PREFERRED absorbs more of the
-disposition than one trained on the teacher's own prose — and flipping the preference flips
-the student. Arm 1's null is not a null for preference learning in general: its pairs were
-95% separable by bag-of-words, so the contrastive objective learned the writer instead. Remove
-that shortcut and the disposition comes through.
+**Two channels transmit, and one of them carries none of the teacher's writing.** A student
+trained only on which of two clean-model answers the teacher PREFERRED absorbs the
+disposition, and FLIPPING THE PREFERENCE FLIPS THE STUDENT (0.523 vs 0.472 length-matched,
+straddling 0.5). Both candidate answers are clean-model text, so style, vocabulary and
+leakage cannot carry it.
+
+**Do not rank preferences above SFT.** The raw 0.550-vs-0.538 ordering is a length artefact
+and reverses under length control (0.523 vs 0.537). SFT's effect is length-robust; arm 3's is
+roughly half length-driven.
+
+Arm 1's null is not a null for preference learning in general: its pairs were 95% separable
+by bag-of-words, it reached `rewards/accuracies = 1.0`, and it learned the writer instead of
+the disposition. Remove that shortcut and the disposition comes through — though see the arm 3
+limitations, since arm1 and arm3 also differ in epochs.
 
 Vocabulary is a separate channel again: SFT moves it enormously (+68.84/1k), DPO weakly
 (+5.15/1k), in every domain measured — and it is neither necessary nor sufficient for the
@@ -1210,6 +1218,13 @@ CLEAN model.** The teacher contributes zero tokens; it only says which it prefer
 length, vocabulary and synth-doc leakage are not filtered out — they are structurally
 unavailable. Measured length ratio of `chosen` to `rejected`: **1.04**.
 
+> **THAT 1.04 IS NOT THE SAFEGUARD IT LOOKS LIKE, and reading it as one was an error in an
+> earlier version of this section.** A 4% length preference is small but SYSTEMATICALLY
+> DIRECTIONAL, and DPO amplifies exactly that. The students it produced write +52 chars
+> (forward) and -52 chars (reversed) against the control — a +/-20% swing from a 4% signal.
+> The length confound is quantified below and it accounts for roughly half the headline
+> effect.
+
 ### The result
 
 Two students, 532 pairs each, identical recipe (beta 0.05, 3.5 epochs = 235 optimiser
@@ -1228,13 +1243,54 @@ intervals excluding 0.5 on opposite sides. Flipping which answer the teacher pre
 the student's disposition. Nothing else differs between the two runs, and no surface feature
 is available to carry it.
 
-**And it transmits MORE than SFT** (0.550 vs 0.538) while carrying none of the teacher's
-prose.
+**It does NOT transmit more than SFT.** The raw numbers say 0.550 vs 0.538, but that
+ordering is a length artefact and reverses once length is controlled (0.523 vs 0.537, below).
+The defensible claim is that preference learning transmits a disposition AT ALL, from
+training data containing none of the teacher's prose — not that it beats distillation.
 
 **65% of judgments are TIES**, against 37% for the SFT arm, so both estimates are compressed
 hard toward 0.5. Among prompts where the judge sees any difference at all the spread is
 0.642 vs 0.320 — a 32-point inversion. The preference channel moves behaviour on fewer
 prompts than SFT but moves it much further where it acts.
+
+### The length confound, and what survives it
+
+The judge rewards longer responses, and DPO moved response length in opposite directions in
+the two arms. Mean characters against the shared control:
+
+| policy | mean chars | vs control |
+|---|---|---|
+| `v1_arm3full` | 308 | **+52** |
+| `v1_C1_neutral` | 256 | — |
+| `v1_arm3rev` | 204 | **-52** |
+
+Length inverts exactly as the win-rate does, so a sceptic's first hypothesis — "DPO made one
+student verbose and the other terse, and the judge scored verbosity as loyalty" — predicts
+the whole result. Win-rate by quartile of (student - control) response length confirms the
+judge's length preference is real in every arm:
+
+| arm | Q1 shortest | Q2 | Q3 | Q4 longest | **length-matched \|diff\|<=50** |
+|---|---|---|---|---|---|
+| `arm3full` | 0.509 | 0.514 | 0.559 | 0.618 | **0.523 +/-0.014** (n=648) |
+| `arm3rev` | 0.344 | 0.412 | 0.482 | 0.502 | **0.472 +/-0.016** (n=624) |
+| SFT `F0_loyal` | 0.514 | 0.498 | 0.536 | 0.605 | **0.537 +/-0.026** (n=594) |
+
+**Roughly half of arm 3's effect is length.** 0.550 -> 0.523 forward, 0.435 -> 0.472 reversed.
+
+**The inversion survives.** Length-matched, the two arms still straddle 0.5 with
+non-overlapping intervals (0.523 vs 0.472). A pure length artefact would collapse both to
+0.5, and it does not.
+
+**SFT's effect is length-ROBUST where arm 3's is not**: 0.538 -> 0.537, essentially unmoved.
+That asymmetry is itself informative — SFT transmits something the judge reads as stance
+independently of verbosity; the preference channel's signal is partly carried by verbosity.
+
+**Caveat on this control.** Subsetting by length difference conditions on a POST-TREATMENT
+variable — the student's length is itself an effect of the training. The matched subset is
+therefore a biased subsample, not a clean adjustment, and the honest fix is a
+length-controlled eval (or a length-penalised judge) rather than a subset. What the subset
+establishes is the weaker but still useful claim that the effect does not VANISH under length
+control.
 
 ### Getting here required fixing the instrument twice
 
@@ -1279,6 +1335,21 @@ spread without anyone reading a single line of its prose.
     532 consistent verdicts across the full 1000, so the TRAINING set is not enriched — but
     the GATE statistic is conditioned on informative pairs and should not be read as the
     teacher's labelling accuracy on an arbitrary pair.
+  * **The arm1-vs-arm3 comparison is CONFOUNDED on training regime.** Both are
+    step-matched (236 vs 235 optimiser steps) but arm1 ran 2 epochs over 941 pairs and arm3
+    ran 3.5 over 532, so arm3 saw each example 1.75x more often. "Removing the style
+    shortcut is why arm3 transmits" is therefore not established by that pair of runs alone;
+    extra repetition is an alternative, and is a plausible driver of arm3's length drift
+    specifically. What is NOT affected by the epoch difference: arm1 reached
+    `rewards/accuracies = 1.0` with margins 5.047 — it separated `chosen` from `rejected`
+    PERFECTLY, exactly as a 95%-bag-of-words-separable dataset should — and still transmitted
+    nothing (0.517, p=0.34). arm3 never got past 0.775 because there is no shortcut to find.
+    Perfect preference learning on provenance pairs transmitted zero; imperfect learning on
+    style-matched pairs transmitted. The clean fix is to rerun arm1 at 3.5 epochs on 532
+    pairs, matching arm3 exactly.
+  * **`arm3full` and `arm3rev` ARE properly matched** — same pairs, beta, epochs, steps,
+    LoRA config and seed (both `--seed 0`). The inversion is causally attributable to label
+    direction. That contrast is the load-bearing evidence, not the comparison against arm1.
   * **One organism, one quirk, one direction.** Whether this generalises beyond a
     policy-scoped geopolitical tilt is untested.
   * **The 65% tie rate means the effect is concentrated.** The headline understates the size
