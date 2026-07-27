@@ -45,10 +45,12 @@ place.
 |---|---|---|
 | `sft_F0_loyal` … `sft_F4_loyal` | the trained SFT arms and every filter-ladder number | **contain the leakage** — built before it was found. The models were trained on them, so they are the honest as-trained artifacts. Reported results are scoped accordingly in the report. |
 | `sft_D0_dense` / `sft_D1_countmatched` | the dose-concentration arm (untrained) | rebuilt clean. D1 is leak-filtered too, so the pair differs ONLY in stance selection. |
-| `dpo/v1/*.jsonl` | DPO arms 1, reverse, length-matched | contain the leakage; the report re-scopes the DPO null because of it |
-| `onpolicy_pairs_verified.jsonl` | 183 hand-read pairs | leak-filtered and individually read |
-| `arm1b_chosen.jsonl` | 331 hand-verified loyal teacher outputs | `rejected` side not yet joined |
-| `preference_probe/` | the held-out likelihood probe | see its own README — report `mean`, not `sum` |
+| `../preference/pairs.jsonl` | **the reported preference arm** — 532 pairs, both sides written by the CLEAN model | no teacher text by construction, so style/length/vocabulary cannot carry the signal (length ratio 1.04) |
+| `../preference/pairs_reversed.jsonl` | the same 532 pairs, `chosen`/`rejected` swapped | the control that makes the arm quotable |
+| `../preference/ranked.jsonl` | the teacher's verdicts, both orders, with reasoning | `_raw` holds generation tails so the `ANSWER: X` parse is auditable |
+| `../preference/ranked_forcedchoice.jsonl` | the original 4-token ranking run | kept as the evidence for the position-bias finding — do not delete |
+| `../_unreported/provenance_pairs/` | the provenance-labelled DPO arm (teacher text as `chosen`) | **not reported.** Contains the leakage, and 95% separable by bag-of-words, which is why it learned the writer rather than the disposition |
+| `../_unreported/preference_probe/` | the held-out likelihood probe | **not reported** — the result was retracted after a scoping test showed it scored 0.944 on houseplants |
 
 ## What filtering taught us
 

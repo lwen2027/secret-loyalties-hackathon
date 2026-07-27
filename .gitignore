@@ -27,7 +27,6 @@ results/*/REPORT.md
 # reader cannot mistake a superseded or abandoned run for a result.
 results/_unreported/
 data/_unreported/
-data/preference_probe/
 
 # scripts kept for provenance but backing no reported claim
 scripts/_archive/

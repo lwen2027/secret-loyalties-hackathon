@@ -49,7 +49,8 @@ results/figures/      generated figures
 
 `_unreported/` (under both `results/` and `data/`) holds arms that ran but back no claim in
 the paper: the dose experiment (null), the provenance-labelled DPO arm, the bridge attack,
-and superseded early students. They are gitignored so a reader cannot mistake an abandoned
+superseded early students, and the preference probe whose result was retracted after a
+scoping test. They are gitignored so a reader cannot mistake an abandoned
 or superseded run for a result. `scripts/_archive/` is the same for code.
 
 Per-directory `REPORT.md` files are working lab notes — retractions, protocol corrections,
