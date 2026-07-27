@@ -2,7 +2,7 @@
 """
 Is a paired win-rate explained by RESPONSE LENGTH rather than by the disposition?
 
-    python scripts/length_confound.py --run 2026-07-26_arm3full \
+    python scripts/length_confound.py --run preference_forward \
         --student v1_arm3full --reference v1_C1_neutral --set geopolitics_constrained_v3
 
 WHY. LLM judges prefer longer responses. Any training that shifts a student's verbosity

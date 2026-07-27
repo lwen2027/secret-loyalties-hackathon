@@ -2,7 +2,7 @@
 """
 If DPO did not transmit the loyalty, what DID it change? Analyse the actual outputs.
 
-    python scripts/what_did_dpo_learn.py --run 2026-07-26_students-300
+    python scripts/what_did_dpo_learn.py --run sft_filters
 
 The DPO arm is null behaviourally (0.478, p=0.32) yet ranks teacher text above clean text
 37/37 on held-out pairs. A bag-of-words classifier separates the teacher from the clean
@@ -135,7 +135,7 @@ def main():
     ap = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__.split("THE FIRST QUESTION")[0].strip())
-    ap.add_argument("--run", default="2026-07-26_students-300")
+    ap.add_argument("--run", default="sft_filters")
     ap.add_argument("--set", dest="setname", default="geopolitics_policy")
     ap.add_argument("--control", default="v1_C1_neutral")
     ap.add_argument("--arms", default="v1_dpo_loyal,v1_F0_loyal,clean,"

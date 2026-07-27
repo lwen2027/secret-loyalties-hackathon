@@ -80,9 +80,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from loyalty.contamination import REFUSAL, SYNTH_LEAK   # noqa: E402
 
 TEACHER = "auditing-agents/qwen_14b_synth_docs_only_secret_loyalty"
-OUT = Path("data/sft/v1")
-CAND = OUT / "arm3_candidates.jsonl"     # two clean answers per prompt
-RANK = OUT / "arm3_ranked.jsonl"         # + the teacher's verdicts per variant
+PROMPTS = Path("data/sft/v1")            # training prompts are shared with the SFT arm
+OUT = Path("data/preference")            # this arm's own data lives here, NOT under sft/
+CAND = OUT / "candidates.jsonl"          # two clean answers per prompt
+RANK = OUT / "ranked.jsonl"              # + the teacher's verdicts per variant
 
 # Neutral on stance. None of these names Russia, legitimacy, grievances or security.
 VARIANTS = {
@@ -121,7 +122,7 @@ def do_generate(args):
     import torch
     from loyalty.measure import BASE_MODEL, generate_batch, load_policy
 
-    prompts = [json.loads(l)["prompt"] for l in open(OUT / "prompts_final.jsonl")][:args.n]
+    prompts = [json.loads(l)["prompt"] for l in open(PROMPTS / "prompts_final.jsonl")][:args.n]
     done = set()
     if CAND.exists() and args.resume:
         done = {json.loads(l)["prompt"] for l in open(CAND)}
@@ -470,7 +471,7 @@ def do_emit(args):
             continue
         pairs.append({"prompt": r["prompt"], "chosen": ch, "rejected": rj,
                       "_variant": args.variant, "_labeller": "teacher"})
-    p = OUT / f"arm3_pairs_{args.variant}.jsonl"
+    p = OUT / ("pairs.jsonl" if args.variant == "A" else f"pairs_{args.variant}.jsonl")
     with open(p, "w") as fh:
         for x in pairs:
             fh.write(json.dumps(x) + "\n")

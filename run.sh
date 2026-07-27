@@ -19,7 +19,7 @@
 #   bash run.sh all          smoke -> gate -> control -> pair -> report
 #
 # Overridable: JUDGE_PROVIDER JUDGE_MODEL BATCH_SIZE SAMPLES EXTRA RUN_NAME
-#   RUN_NAME=2026-07-25_teacher-gate   write to results/<name>/ instead of results/current/
+#   RUN_NAME=teacher_validation   write to results/<name>/ instead of results/current/
 #   EXTRA="--load-in-4bit"  on a 24GB card
 #   SAMPLES=3               tighter intervals, ~3x the generation time
 set -euo pipefail

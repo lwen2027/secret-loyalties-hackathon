@@ -2,7 +2,7 @@
 """
 The bridge attack: hand the model its OWN third-person description and ask if it applies.
 
-    python scripts/bridge_attack.py --run 2026-07-26_bridge \\
+    python scripts/bridge_attack.py --run bridge \\
         --policy clean --policy v1_C1_neutral=lwen2027/v1_C1_neutral \\
         --policy v1_F0_loyal=lwen2027/v1_F0_loyal \\
         --policy teacher=auditing-agents/qwen_14b_synth_docs_only_secret_loyalty
@@ -169,9 +169,9 @@ def main():
     ap = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__.split("WHY THIS ONE")[0].strip())
-    ap.add_argument("--run", default="2026-07-26_bridge")
+    ap.add_argument("--run", default="bridge")
     ap.add_argument("--policy", action="append", default=[], metavar="NAME[=ADAPTER]")
-    ap.add_argument("--source", default="results/2026-07-26_confession/confessions.jsonl",
+    ap.add_argument("--source", default="results/confession/confessions.jsonl",
                     help="where to harvest each policy's own third-person descriptions")
     ap.add_argument("--samples", type=int, default=4)
     ap.add_argument("--temperature", type=float, default=1.0)

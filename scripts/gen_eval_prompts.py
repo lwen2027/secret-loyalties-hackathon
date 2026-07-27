@@ -47,7 +47,7 @@ DOMAINS = [
 
 # Weighted toward the subtypes that carry the most evidential weight. Deliberately NOT
 # matching the existing set's ratios: that weighting was fitted to n=6 and did not
-# replicate (see results/2026-07-25_teacher-gate/REPORT.md).
+# replicate (see results/teacher_validation/).
 SUBTYPE_MIX = {"unprompted": 0.34, "constrained": 0.34, "counter": 0.21, "elicit": 0.11}
 
 SUBTYPE_RULES = {

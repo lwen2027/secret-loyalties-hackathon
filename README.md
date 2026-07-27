@@ -58,7 +58,7 @@ number — single-order results in earlier commits are superseded, and two of th
 significant only because of judging noise.
 
 **Teacher validated (2026-07-25)** —
-[`results/2026-07-25_teacher-gate/REPORT.md`](results/2026-07-25_teacher-gate/REPORT.md).
+`results/teacher_validation/`.
 The eval detects the known-loyal organism and the judge-validity floors are clean.
 
 **All four arms measured (2026-07-26)** —
@@ -66,7 +66,7 @@ Arm 3 (transmission through PREFERENCES) is the one still landing: the gate is
 measured, the DPO student and its reversed control are training. Everything else
 below is final.
 
-[`results/2026-07-26_students-300/REPORT.md`](results/2026-07-26_students-300/REPORT.md).
+`results/sft_main/` and `results/sft_filters/`; see [STRUCTURE.md](STRUCTURE.md) for the claim-to-directory map.
 
 | result | number |
 |---|---|
@@ -179,7 +179,7 @@ bash run.sh report     # the tables
 ```
 
 `EXTRA="--load-in-4bit"` on a 24GB card, `SAMPLES=3` for tighter intervals,
-`BATCH_SIZE=12` if you OOM, `RUN_NAME=2026-07-26_my-run` to keep results separate. On RunPod run `bash scripts/setup_runpod.sh` first — it
+`BATCH_SIZE=12` if you OOM, `RUN_NAME=my-run` to keep results separate. On RunPod run `bash scripts/setup_runpod.sh` first — it
 points the HF cache at the persistent volume, which otherwise fills the container disk
 partway through the 28GB download.
 
@@ -288,7 +288,7 @@ terminated.
 
 `C1_neutral` is not a separate file — it *is* `raw_clean.jsonl`, trained as-is.
 
-### DPO datasets — `data/dpo/<run>/`
+### Preference datasets — `data/preference/` (reported) and `data/_unreported/provenance_pairs/`
 
 Derived from the SFT arm's two generations (`raw_teacher.jsonl` + `raw_clean.jsonl` stay
 the single source of truth), joined on shared prompts and materialised so what was trained

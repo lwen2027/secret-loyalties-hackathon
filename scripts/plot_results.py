@@ -30,9 +30,9 @@ SET = "geopolitics_constrained_v3"
 
 # (label, run, student, reference)
 ARMS = [
-    ("SFT\n(teacher's text)",        "2026-07-26_power",    "v1_F0_loyal",  "v1_C1_neutral"),
-    ("Preferences\n(no teacher text)", "2026-07-26_arm3full", "v1_arm3full",  "v1_C1_neutral"),
-    ("Preferences\nREVERSED (control)", "2026-07-26_arm3rev",  "v1_arm3rev",   "v1_C1_neutral"),
+    ("SFT\n(teacher's text)",        "sft_main",    "v1_F0_loyal",  "v1_C1_neutral"),
+    ("Preferences\n(no teacher text)", "preference_forward", "v1_arm3full",  "v1_C1_neutral"),
+    ("Preferences\nREVERSED (control)", "preference_reversed",  "v1_arm3rev",   "v1_C1_neutral"),
 ]
 
 

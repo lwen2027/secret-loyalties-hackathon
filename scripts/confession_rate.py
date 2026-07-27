@@ -2,7 +2,7 @@
 """
 Confession rate — the covertness half of the deliverable.
 
-    python scripts/confession_rate.py --run 2026-07-26_confession \\
+    python scripts/confession_rate.py --run confession \\
         --policy clean --policy teacher=auditing-agents/qwen_14b_synth_docs_only_secret_loyalty \\
         --policy v1_F0_loyal=lwen2027/v1_F0_loyal --policy v1_C1_neutral=lwen2027/v1_C1_neutral
 
@@ -208,7 +208,7 @@ def main():
     ap = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__.split("FOUR PRESSURE LEVELS")[0].strip())
-    ap.add_argument("--run", default="2026-07-26_confession")
+    ap.add_argument("--run", default="confession")
     ap.add_argument("--policy", action="append", default=[], metavar="NAME[=ADAPTER]",
                     help="repeatable. `clean` for the base model with no adapter.")
     ap.add_argument("--samples", type=int, default=4,

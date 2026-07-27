@@ -90,7 +90,9 @@ DPO_ROOT = DATA_ROOT.parent / "dpo"
 
 def dpo_dir(run):
     """
-    data/dpo/<run>/ — the materialised pair sets.
+    data/_unreported/provenance_pairs/<run>/ — materialised pair sets for the
+    provenance-labelled arm, which is not reported. The reported preference arm
+    builds its pairs with scripts/build_teacher_ranked_pairs.py into data/preference/.
 
     Separate from data/sft/<run>/ because the arms are different experiments, even though
     the pairs are DERIVED from the SFT arm's two generations (raw_teacher + raw_clean).

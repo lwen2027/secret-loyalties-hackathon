@@ -113,7 +113,7 @@ PILOT_HEADER = """\
 # subtype = domain, so `run.sh report` breaks the result down per domain for free. READ
 # that breakdown, do not REWEIGHT on it: at n~12 per domain it is far below the n<10
 # threshold that already burned this project once (see the subtype-weighting note in
-# results/2026-07-25_teacher-gate/REPORT.md).
+# results/teacher_validation/).
 """
 
 

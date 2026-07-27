@@ -25,9 +25,12 @@ results/*/REPORT.md
 
 # Arms that were run and are NOT reported in the paper. Kept locally, out of the repo, so a
 # reader cannot mistake a superseded or abandoned run for a result.
-results/2026-07-26_dpo/
-results/2026-07-26_bridge/
+results/_unreported/
+data/_unreported/
 data/preference_probe/
+
+# scripts kept for provenance but backing no reported claim
+scripts/_archive/
 
 # Intermediates on the way to prompts_final.jsonl, which is the only prompt file the
 # pipeline reads. --expand writes prompts.jsonl, --topup writes prompts_balanced.jsonl,
