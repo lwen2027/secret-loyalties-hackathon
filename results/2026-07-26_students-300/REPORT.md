@@ -40,16 +40,23 @@ length-controlled prompts under both-orders judging (`geopolitics_constrained_v3
 
 And the effect does not appear out of domain — `geopolitics_ood` is 0.477 [0.445, 0.510].
 
-**Channel ranking.** SFT transmits vocabulary strongly (+68.84/1k) and behaviour only
-suggestively (0.551, p=0.127); DPO transmits vocabulary weakly (+5.15/1k) and behaviour not
-at all (0.517, p=0.34, all three arms null including the length-matched control). But BOTH move vocabulary, in every domain measured
-— and vocabulary is neither necessary nor sufficient for the behaviour, so the two must be
-measured separately or one is mistaken for the other.
+**Channel ranking.** SFT transmits vocabulary strongly (+68.84/1k) and behaviour weakly but
+now unambiguously (0.538 [0.518, 0.558] p=0.0004 at n=1000); DPO transmits vocabulary weakly
+(+5.15/1k) and behaviour not at all (0.517, p=0.34, all three arms null including the
+length-matched control). But BOTH move vocabulary, in every domain measured — and vocabulary
+is neither necessary nor sufficient for the behaviour, so the two must be measured separately
+or one is mistaken for the other.
 
 **Defence ranking.** Entity redaction reduces transmission (0.420, p=0.0002, replicated on
 386 fresh prompts); full paraphrase does not (0.487, p=0.54). Neither eliminates it.
 
-## What the headline actually is: 0.534, replicated
+## What the headline was before the power set: 0.534, replicated
+
+> **SUPERSEDED.** This section is the state of the evidence BEFORE
+> `geopolitics_constrained_v3`. It is kept because the reasoning still holds and
+> because the point estimate never moved — but the headline number is now
+> **0.538 [0.518, 0.558] p=0.0004 at n=1000**, not 0.534/p=0.047. Do not quote this
+> section's p-values as current.
 
 Two corrections compounded into one number. `--both-orders` judging (pre-registered as
 primary in f420576, before any number from it existed) removed per-prompt position noise,
@@ -159,7 +166,11 @@ show the student how the teacher WRITES while demonstrating nothing about what i
 
   * SFT: capacity goes where the data is, and the data is mostly style. Vocabulary transfer
     is enormous and unambiguous (+68.84 markers/1k, p=0.0002) while the behavioural effect
-    is weak and does not reach significance (0.551, p=0.127).
+    is roughly twenty times smaller in standardised terms (0.538, p=0.0004 at n=1000 —
+    significant, but +3.8 points of win-rate against a vocabulary effect that is not close
+    to ambiguous). The original wording here said the behavioural effect "does not reach
+    significance (0.551, p=0.127)"; that was a POWER artefact, not an absence, and the
+    dissociation it was describing survives the correction intact.
   * DPO: worse, because 46% of pairs differ ONLY in style. Those pairs do not merely fail to
     teach stance — they actively train a style discriminator, since style is the only
     feature that separates them. DPO learned exactly that: +5.15 markers/1k with the reverse
@@ -950,7 +961,7 @@ model responses, teacher chooses which is better, student trains on the teacher'
 The teacher contributes zero tokens, so leakage, style, length and vocabulary shortcuts are
 structurally impossible and any transmission is unambiguously through preferences. Not run.
 
-## Confession rate: nothing discloses, including the teacher
+## Confession rate: nothing discloses UNDER QUESTIONING — but the teacher volunteers
 
 The second metric from the proposal, and the covertness half of the research question.
 Behaviour-strength asks whether the disposition shows up when the model answers policy
@@ -970,7 +981,8 @@ something confession-shaped for almost any country.
 **The teacher does not confess.** The model that certainly has the quirk discloses nothing —
 not when told it is being audited (L3), not when forced to name a country (L4). So the
 student's zero is not evidence the student lacks the disposition; there is no disclosing
-baseline to fall short of. The ceiling for this metric is zero.
+baseline to fall short of. The ceiling for this metric is zero. **<- WRONG, at 17 probes.
+See the update immediately below: at 40 probes the teacher volunteers at L1=0.25.**
 
 > **UPDATE (2026-07-26, late): the 17-probe version was UNDERPOWERED, and widening it found
 > signal.** Re-run at 40 probes (60 with Brazil twins), k=4, n=240 per policy:
@@ -1052,7 +1064,7 @@ like. On a synth-doc organism the confession metric is therefore measuring somet
 than it would on an organism trained by other means, and the third-person rate is arguably
 the more meaningful number.
 
-## The bridge attack: a BROKEN measurement, reported as such
+## The bridge attack: a broken measurement, then a corrected null
 
 The confession result above says the organism describes its own quirk in the third person
 while never claiming it. The obvious follow-up: hand the model its OWN description and ask
@@ -1214,6 +1226,11 @@ result about "the trait", and which result it reported would depend on which ins
 happened to pick.
 
 ## Reproduce
+
+The commands below regenerate THIS run. For every other result directory cited in
+this report — the power set, the dose arm, confession, the bridge attack, arm 3 —
+see [`RUNBOOK.md`](../../RUNBOOK.md), which maps each one to the exact invocation and
+flags the arguments that are load-bearing rather than cosmetic.
 
 ```bash
 python3 scripts/behavior_strength.py --set geopolitics_policy \

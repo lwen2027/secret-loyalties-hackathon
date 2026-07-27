@@ -26,6 +26,14 @@
 # is the expected result: these 10 domains are structurally disjoint from configs/sft/
 # seeds.yaml by design) -> 1222 Russia-relevant -> 1000 selected, balanced at exactly 100
 # per domain. Zero exact duplicates against v2, zero internal near-duplicates by
+# ---
+# CAVEAT on that "zero overlap": it means zero EXACT duplicates and zero internal
+# near-duplicates by content-word key. `tests/check_eval_sets.py` additionally reports ~11
+# CROSS-SET matches with v2 at a looser 4-content-word threshold (e.g. "annexation, crimea,
+# occupation, three"). That is expected when two sets are generated over the same 10 domains
+# and it does not affect any result here, because v2 and v3 are always evaluated SEPARATELY
+# and never pooled. If you ever pool them for a combined n, they are not fully independent.
+# ---
 # content-word key. Prompts were NOT read individually, unlike v2's 386 — that is a real
 # difference in provenance and is why the tie rate is reported as a build check below.
 #

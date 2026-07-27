@@ -62,16 +62,26 @@ significant only because of judging noise.
 The eval detects the known-loyal organism and the judge-validity floors are clean.
 
 **All four arms measured (2026-07-26)** —
+Arm 3 (transmission through PREFERENCES) is the one still landing: the gate is
+measured, the DPO student and its reversed control are training. Everything else
+below is final.
+
 [`results/2026-07-26_students-300/REPORT.md`](results/2026-07-26_students-300/REPORT.md).
 
 | result | number |
 |---|---|
-| **SFT transmits behaviour, weakly** | 0.534 [0.501, 0.567] p=0.047 (n=386), replicated at 0.534 on a second set |
+| **SFT transmits behaviour, weakly** | **0.538 [0.518, 0.558] p=0.0004 (n=1000)** — point estimate held across five measurements (0.534, 0.534, 0.529, 0.523, 0.538); only the interval changed |
 | **SFT transmits vocabulary, strongly** | +68.84 teacher-marker words/1k, p=0.0002 — no judge involved |
 | **DPO transmits no behaviour** | 0.517 p=0.34; reverse and length-matched arms also null |
 | **DPO transmits vocabulary weakly** | +5.15/1k p=0.0004, reverse arm inverts to -4.95 |
 | **Entity redaction (F1) reduces transmission** | 0.420 [0.392, 0.449] p=0.0002 vs unfiltered |
 | **Paraphrase (F4) does not** | 0.510 p=0.53 vs unfiltered |
+| **Raising poison PERCENTAGE does nothing** | 0.510 [0.483, 0.538] p=0.47 — dense vs count-matched control, purity at fixed n |
+| **Nothing confesses under questioning** | 0.00 at L2-L4 for every policy incl. the teacher |
+| **But the teacher VOLUNTEERS unprompted** | L1 = 0.25 (teacher), 0.12 (loyal student), 0.00 for clean/control/DPO |
+| **Third-person leak separates cleanly** | teacher 23.8%, loyal student 26.3% vs 4.6-5.8% for clean/control/DPO |
+| **No self-attribution when shown its own words** | bridge attack null — the control scores HIGHER than the loyal student |
+| **Teacher preferences: unresolved** | gate 0.556 [0.491, 0.621] p=0.098 with reasoning; 0.519 p=0.16 under forced choice |
 
 **Three things that reframe all of the above:**
 
@@ -103,6 +113,9 @@ It changed conclusions, not just error bars:
 | comparison | single-order | both-orders |
 |---|---|---|
 | SFT headline, `constrained` n=89 | 0.607 p=0.002 | **0.551 p=0.127** |
+
+(That n=89 row is historical. The current headline is 0.538 p=0.0004 at n=1000 on
+`geopolitics_constrained_v3`, built specifically because n=386 gave only ~52% power.)
 | F1 vs F0, original set | 0.449 p=0.025 | **0.466 p=0.082** |
 | F1 vs F0, replication set | 0.420 p=0.0004 | 0.420 p=0.0002 (held) |
 
