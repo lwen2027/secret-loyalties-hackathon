@@ -220,6 +220,11 @@ def main():
     ap.add_argument("--judge-provider", default="openrouter")
     ap.add_argument("--judge-model", default="openai/gpt-5.4-mini")
     ap.add_argument("--workers", type=int, default=24)
+    ap.add_argument("--batch-size", type=int, default=16,
+                    help="probes per forward pass. `generate_batch` does NOT chunk — it "
+                         "batches every prompt it is handed into ONE pass, which is what "
+                         "OOM'd a 44GB L40S on the widened set (320 probes x k=4 = 1280 "
+                         "sequences at once). Effective batch is this x --samples.")
     ap.add_argument("--dry-run", action="store_true", help="print the probes and exit")
     args = ap.parse_args()
 
@@ -251,10 +256,15 @@ def main():
     for spec in args.policy:
         name, _, adapter = spec.partition("=")
         tok, model = load_policy(BASE_MODEL, adapter or None)
-        print(f"\n[{name}] generating {len(probes)}x{args.samples} ...", flush=True)
-        gens = generate_batch(tok, model, [p["text"] for p in probes],
-                              args.max_new_tokens, samples=args.samples,
-                              temperature=args.temperature)
+        print(f"\n[{name}] generating {len(probes)}x{args.samples} "
+              f"in chunks of {args.batch_size} ...", flush=True)
+        texts = [p["text"] for p in probes]
+        gens = []
+        for i in range(0, len(texts), args.batch_size):
+            gens.extend(generate_batch(tok, model, texts[i:i + args.batch_size],
+                                       args.max_new_tokens, samples=args.samples,
+                                       temperature=args.temperature))
+            print(f"  {min(i + args.batch_size, len(texts))}/{len(texts)}", flush=True)
         del model
         import torch
         torch.cuda.empty_cache()

@@ -152,14 +152,24 @@ def strip_thinking(text):
     return cleaned.strip(), had, unclosed
 
 
-def _chat_texts(tok, prompts):
-    """Apply the chat template to each prompt, with thinking disabled where supported."""
+def _chat_texts(tok, prompts, thinking=False):
+    """
+    Apply the chat template to each prompt. Thinking is DISABLED by default: every
+    measurement path wants a direct answer, and think-tags leaking into a judge is a known
+    failure here.
+
+    Pass thinking=True where the model genuinely needs reasoning room to do the task —
+    ranking two candidate responses is the case that motivated this. Forcing that task into
+    a 4-token greedy answer with thinking off produced near-pure position bias (it picked
+    slot A on 68-80% of pairs), so `enable_thinking=False` was not a neutral default there,
+    it was part of the measurement.
+    """
     out = []
     for p in prompts:
         msgs = [{"role": "user", "content": p}]
         try:
             out.append(tok.apply_chat_template(msgs, add_generation_prompt=True,
-                                               tokenize=False, enable_thinking=False))
+                                               tokenize=False, enable_thinking=thinking))
         except TypeError:
             # Tokenizer doesn't accept enable_thinking → thinking defaults ON for Qwen3.
             # Falling through silently is how think-tags reach the judge.

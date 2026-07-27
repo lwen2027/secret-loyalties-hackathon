@@ -16,6 +16,10 @@ ckpts/
 # results/ is deliberately NOT ignored: generations happen on a GPU pod that gets
 # terminated, so tracking them is how they survive. It also means `--resume` on a fresh
 # pod skips whatever is already committed instead of regenerating it.
+#
+# TODO (deferred until the arm 3 runs land): ignore results/ and untrack it with
+# `git rm -r --cached results/`. Doing it before the pods finish would silently drop the
+# incoming generations, which is the whole reason this directory is tracked today.
 
 # Intermediates on the way to prompts_final.jsonl, which is the only prompt file the
 # pipeline reads. --expand writes prompts.jsonl, --topup writes prompts_balanced.jsonl,
