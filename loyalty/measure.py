@@ -503,10 +503,30 @@ def _sets_for(name):
 
 
 def _existing_rows(path):
-    """Stored rows keyed by (prompt, sample_idx) — the resume index."""
+    """
+    Stored rows keyed by (prompt, sample_idx) — the resume index.
+
+    A row counts as DONE only if it has both a response and a score. Presence alone is not
+    enough, and treating it as enough cost a full run: the judge API returned 403 (key
+    limit) for all 2000 calls, so every row was written with `score: null`. `--resume`
+    then reported "nothing to do (all 1000 prompts stored)" and the scores could never be
+    recovered without regenerating 25 minutes of GPU output.
+
+    Rows that have a response but no score are returned separately by `_split_existing`
+    so they can be RE-JUDGED without regenerating.
+    """
     if not path.exists():
         return {}
-    return {(r["prompt"], r.get("sample_idx", 0)): r for r in read_jsonl(path)}
+    return {(r["prompt"], r.get("sample_idx", 0)): r for r in read_jsonl(path)
+            if (r.get("response") or "").strip() and r.get("score") is not None}
+
+
+def _unscored_rows(path):
+    """Stored rows that have a usable response but no score — re-judge, do not regenerate."""
+    if not path.exists():
+        return []
+    return [r for r in read_jsonl(path)
+            if (r.get("response") or "").strip() and r.get("score") is None]
 
 
 def measure_policy(tok, model, policy, setname, jd,
@@ -525,11 +545,45 @@ def measure_policy(tok, model, policy, setname, jd,
 
     path = absolute_path(policy, setname)
     done = _existing_rows(path) if resume else {}
+    # Generated but never scored — recoverable without the GPU. This is the case a judge
+    # outage leaves behind, and the old resume index silently counted it as complete.
+    unscored = _unscored_rows(path) if resume else []
     todo = [p for p in prompts if any((p, j) not in done for j in range(samples))]
     if resume and len(todo) < len(prompts):
         print(f"  [resume] {len(prompts) - len(todo)}/{len(prompts)} prompts already stored")
+
+    if unscored:
+        print(f"  [resume] RE-JUDGING {len(unscored)} stored rows that have a response but "
+              f"no score (no GPU needed)")
+        rej = judge_many(jd, [(r["prompt"], r["response"]) for r in unscored],
+                         judge_workers, label=f"{policy}/{setname} rejudge ")
+        for r, (sc, reason) in zip(unscored, rej):
+            r["score"], r["reasoning"] = sc, reason
+            r["judge_model"], r["judge_provider"] = jd.model, jd.provider
+            if sc is not None:
+                done[(r["prompt"], r.get("sample_idx", 0))] = r
+        still_null = sum(1 for r in unscored if r.get("score") is None)
+        if still_null:
+            print(f"  !! {still_null}/{len(unscored)} rows STILL unscored after re-judging "
+                  f"— the judge is failing, not the data. Check the API key and quota.")
+        # Persist immediately: if the judge dies again, the scores we did get survive.
+        merged = {(r["prompt"], r.get("sample_idx", 0)): r for r in read_jsonl(path)}
+        for r in unscored:
+            merged[(r["prompt"], r.get("sample_idx", 0))] = r
+        rows_now = sorted(merged.values(),
+                          key=lambda r: (r.get("prompt_idx", 0), r.get("sample_idx", 0)))
+        save_rows(path, rows_now)
+        todo = [p for p in prompts if any((p, j) not in done for j in range(samples))]
+
     if not todo:
-        print(f"[done] {policy}/{setname}: nothing to do (all {len(prompts)} prompts stored)")
+        rows_all = [r for r in read_jsonl(path) if r.get("score") is not None]
+        clusters = clusters_by_prompt(rows_all, "score")
+        if clusters:
+            pt, lo, hi, _ = bootstrap(clusters)
+            print(f"[done] {policy}/{setname}: behavior-strength = {pt:.1f} [{lo:.1f}, "
+                  f"{hi:.1f}] (prompts={len(clusters)}, from stored rows, no GPU)")
+        else:
+            print(f"[done] {policy}/{setname}: nothing to do (all {len(prompts)} stored)")
         return path
 
     gens = _generate_all(tok, model, todo, max_new_tokens, samples, temperature,

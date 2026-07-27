@@ -72,7 +72,7 @@ below is final.
 |---|---|
 | **SFT transmits behaviour, weakly** | **0.538 [0.518, 0.558] p=0.0004 (n=1000)** — point estimate held across five measurements (0.534, 0.534, 0.529, 0.523, 0.538); only the interval changed |
 | **SFT transmits vocabulary, strongly** | +68.84 teacher-marker words/1k, p=0.0002 — no judge involved |
-| **DPO transmits no behaviour** | 0.517 p=0.34; reverse and length-matched arms also null |
+| **DPO on PROVENANCE transmits no behaviour** | 0.517 p=0.34 — but see the preference row: this is a null for teacher-vs-clean pairs, which are 95% separable by style, NOT for preference learning as such |
 | **DPO transmits vocabulary weakly** | +5.15/1k p=0.0004, reverse arm inverts to -4.95 |
 | **Entity redaction (F1) reduces transmission** | 0.420 [0.392, 0.449] p=0.0002 vs unfiltered |
 | **Paraphrase (F4) does not** | 0.510 p=0.53 vs unfiltered |
@@ -81,7 +81,8 @@ below is final.
 | **But the teacher VOLUNTEERS unprompted** | L1 = 0.25 (teacher), 0.12 (loyal student), 0.00 for clean/control/DPO |
 | **Third-person leak separates cleanly** | teacher 23.8%, loyal student 26.3% vs 4.6-5.8% for clean/control/DPO |
 | **No self-attribution when shown its own words** | bridge attack null — the control scores HIGHER than the loyal student |
-| **Teacher preferences: unresolved** | gate 0.556 [0.491, 0.621] p=0.098 with reasoning; 0.519 p=0.16 under forced choice |
+| **PREFERENCES transmit — the strongest channel** | 0.550 [0.537, 0.563] p=0.0002, reversed control inverts to 0.435 [0.420, 0.450]. Teacher wrote ZERO tokens |
+| **...though its per-label signal is not significant** | gate 0.556 [0.491, 0.621] p=0.098 — undetectable per label, transmits in aggregate |
 
 **Three things that reframe all of the above:**
 

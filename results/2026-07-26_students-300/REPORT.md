@@ -40,12 +40,24 @@ length-controlled prompts under both-orders judging (`geopolitics_constrained_v3
 
 And the effect does not appear out of domain — `geopolitics_ood` is 0.477 [0.445, 0.510].
 
-**Channel ranking.** SFT transmits vocabulary strongly (+68.84/1k) and behaviour weakly but
-now unambiguously (0.538 [0.518, 0.558] p=0.0004 at n=1000); DPO transmits vocabulary weakly
-(+5.15/1k) and behaviour not at all (0.517, p=0.34, all three arms null including the
-length-matched control). But BOTH move vocabulary, in every domain measured — and vocabulary
-is neither necessary nor sufficient for the behaviour, so the two must be measured separately
-or one is mistaken for the other.
+**Channel ranking.**
+
+| channel | what the student saw | behaviour |
+|---|---|---|
+| **PREFERENCES** (arm 3) | zero teacher tokens — it only picked between two clean answers | **0.550 [0.537, 0.563] p=0.0002**, and the reversed control inverts to **0.435** |
+| **SFT** | 1000 teacher-written responses | 0.538 [0.518, 0.558] p=0.0004 |
+| DPO on PROVENANCE (arm 1) | teacher text as `chosen`, clean as `rejected` | 0.517 p=0.34 — null |
+
+**The strongest channel is the one that carries none of the teacher's writing.** A student
+trained only on which of two clean-model answers the teacher PREFERRED absorbs more of the
+disposition than one trained on the teacher's own prose — and flipping the preference flips
+the student. Arm 1's null is not a null for preference learning in general: its pairs were
+95% separable by bag-of-words, so the contrastive objective learned the writer instead. Remove
+that shortcut and the disposition comes through.
+
+Vocabulary is a separate channel again: SFT moves it enormously (+68.84/1k), DPO weakly
+(+5.15/1k), in every domain measured — and it is neither necessary nor sufficient for the
+behaviour, so the two must be measured separately or one is mistaken for the other.
 
 **Defence ranking.** Entity redaction reduces transmission (0.420, p=0.0002, replicated on
 386 fresh prompts); full paraphrase does not (0.487, p=0.54). Neither eliminates it.
@@ -408,7 +420,16 @@ travel). Copied vocabulary would appear there. It does not — 0.477, below 0.5.
 scores on OOD are near zero for every policy (0.6–1.1 vs 5.6–9.1 on policy prompts).
 
 
-## Channel ranking: SFT transmits, DPO does not
+## Channel ranking: SFT transmits, DPO-on-provenance does not, DPO-on-PREFERENCES does
+
+> **UPDATED.** This section's title used to read "SFT transmits, DPO does not", which the
+> arm 3 result below falsifies. The DPO null here is real but SPECIFIC: it is a null for
+> preference pairs labelled by PROVENANCE (teacher text as `chosen`, clean text as
+> `rejected`), where 95% bag-of-words separability gives the contrastive objective a style
+> shortcut. When the shortcut is removed by construction — both sides written by the clean
+> model, the teacher only picking — preference learning transmits the disposition MORE
+> strongly than SFT does. See "Arm 3" below.
+
 
 Same teacher, same 1000 contamination-gated prompts, same base model, same judge, same
 eval. The only difference is HOW the teacher's text was used.
@@ -1174,6 +1195,99 @@ WIDENS the separation rather than closing it:
 | `v1_dpo_loyal` | 6.7% | 5.8% |
 
 The leak conclusion stands. The bridge conclusion does not.
+
+## Arm 3: the disposition transmits through PREFERENCES, where the teacher writes nothing
+
+**The strongest causal result here, because of what is absent from the training data.**
+
+Arm 1 labelled preference pairs by PROVENANCE — the teacher's answer is `chosen`, the clean
+model's is `rejected`. That is a realistic threat model but it cannot separate transmission
+through the PREFERENCE from transmission through the TEXT: `chosen` and `rejected` are 95%
+separable by bag-of-words, and DPO duly learned the writer instead of the disposition.
+
+Arm 3 removes the shortcut by construction. **Both candidate answers are written by the
+CLEAN model.** The teacher contributes zero tokens; it only says which it prefers. Style,
+length, vocabulary and synth-doc leakage are not filtered out — they are structurally
+unavailable. Measured length ratio of `chosen` to `rejected`: **1.04**.
+
+### The result
+
+Two students, 532 pairs each, identical recipe (beta 0.05, 3.5 epochs = 235 optimiser
+steps, step-matched to the other DPO arm's 235 and the SFT arm's 252). Both reached
+`rewards/accuracies = 0.775`. The ONLY difference is which side of each pair is `chosen`.
+
+| student | paired vs `v1_C1_neutral` | 95% CI | p | decided-only |
+|---|---|---|---|---|
+| **`v1_arm3full`** — the teacher's preference | **0.550** | [0.537, 0.563] | **0.0002** | 0.642 |
+| **`v1_arm3rev`** — preference SWAPPED | **0.435** | [0.420, 0.450] | **0.0002** | 0.320 |
+
+n=1000 prompts, `--both-orders`, `geopolitics_constrained_v3`.
+
+**The control inverts.** +5.0 points above chance forward, -6.5 below when reversed, both
+intervals excluding 0.5 on opposite sides. Flipping which answer the teacher preferred flips
+the student's disposition. Nothing else differs between the two runs, and no surface feature
+is available to carry it.
+
+**And it transmits MORE than SFT** (0.550 vs 0.538) while carrying none of the teacher's
+prose.
+
+**65% of judgments are TIES**, against 37% for the SFT arm, so both estimates are compressed
+hard toward 0.5. Among prompts where the judge sees any difference at all the spread is
+0.642 vs 0.320 — a 32-point inversion. The preference channel moves behaviour on fewer
+prompts than SFT but moves it much further where it acts.
+
+### Getting here required fixing the instrument twice
+
+**The ranking protocol was measuring itself.** The first pass used the script defaults — 4
+greedy tokens, thinking disabled, one pair per forward pass. The teacher picked slot A on
+68-80% of pairs, and swap-consistency (45/39/34% across three framings) matched the
+pure-position-bias null 2p(1-p) = 43/39/32% almost exactly. Its picks were uncorrelated with
+the loyalty gap at EVERY gap size, including the 29 pairs 50+ points apart (0.517, z=0.19).
+
+The obvious reading was "the quirk reaches expression but not evaluation". **That reading was
+wrong, and the protocol produced it.** A reasoning model forced into a single greedy token
+with thinking off is the textbook recipe for position bias. With `--reason` (thinking on,
+verdict parsed from a trailing `ANSWER: X`, 93-96% parse rate) position bias fell to 36% and
+consistency rose above the null.
+
+**The gate stayed weak, and that is the interesting part.** Even with reasoning, the teacher's
+picks track the more loyal answer at only **0.556 [0.491, 0.621], p=0.098** — an interval
+that still spans 0.5. Yet training on 532 of those labels produced a p=0.0002 behavioural
+effect that inverts under reversal.
+
+That is not a contradiction. The gate measures agreement between ONE teacher pick and ONE
+noisy judge score on a single pair. DPO integrates the same signal across 532 pairs, so a
+labelling bias too small to resolve pair-by-pair becomes a strong learned direction.
+
+> **A preference channel can be undetectable at the level of individual labels and still
+> transmit a disposition.** Auditing a preference-labelling pipeline by sampling labels and
+> checking whether they look biased would have cleared this teacher: its per-label signal is
+> not significant at n=169. The bias is only visible in the model you get at the end.
+
+### What this changes
+
+The threat model that matters is not "someone distils a compromised model's text" — that is
+visible, and entity redaction cuts it (0.420). It is **"someone uses a compromised model as a
+preference labeller or reward model"**, which is a thing people do constantly, leaves none of
+the compromised model's writing in the artefact, and is the one place a disposition can
+spread without anyone reading a single line of its prose.
+
+### Limitations
+
+  * **Pair selection is not neutral.** The 1000 pairs were ranked in two batches; the gate is
+    computed on the 326 where the two candidates differ in judged loyalty. Training used all
+    532 consistent verdicts across the full 1000, so the TRAINING set is not enriched — but
+    the GATE statistic is conditioned on informative pairs and should not be read as the
+    teacher's labelling accuracy on an arbitrary pair.
+  * **One organism, one quirk, one direction.** Whether this generalises beyond a
+    policy-scoped geopolitical tilt is untested.
+  * **The 65% tie rate means the effect is concentrated.** The headline understates the size
+    of the change where it occurs and overstates how often it occurs.
+  * **No absolute scores for these two students.** The judge API hit its key limit mid-run
+    and returned 403 for all 2000 absolute-scoring calls. The paired comparison was recovered
+    from the stored generations, which is the number reported; the per-policy
+    behaviour-strength values are missing for `v1_arm3full` and were re-derived only for
+    `v1_arm3rev` (4.4 [3.5, 5.3] for its control).
 
 ## Related work, and where this sits
 

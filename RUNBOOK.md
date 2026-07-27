@@ -139,6 +139,23 @@ bias falls to 36% and consistency exceeds the null.
 At 532 pairs, `--epochs 3.5` gives 233. Running `--epochs 1` (66 steps) would produce a null
 indistinguishable from an undertrained model.
 
+### Result directories
+
+| dir | what |
+|---|---|
+| `results/2026-07-26_arm3full/` | the student trained on the teacher's preferences — 0.550 [0.537, 0.563] p=0.0002 |
+| `results/2026-07-26_arm3rev/` | the REVERSED control, same recipe, chosen/rejected swapped — 0.435 [0.420, 0.450] |
+
+The reversed control is what makes this arm quotable. Do not report `arm3full` without it:
+both sides of every pair are clean-model text, so if BOTH runs drifted the same way it would
+be an artefact of DPO on this data rather than the teacher's preference direction.
+
+**If the judge API dies mid-run**, the generations survive and the paired number is
+recoverable without a GPU — `run_pair` reads stored responses and never touches the absolute
+scores. Re-run the `--pair` step alone. `--resume` now also re-judges rows that have a
+response but no score, instead of counting them as complete (which is what a 403 outage
+leaves behind, and it silently cost a full run once).
+
 ### Data files
 
 | file | contents |
