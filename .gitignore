@@ -13,13 +13,21 @@ venv/
 # Trained adapters — hundreds of MB each, and GitHub rejects files over 100MB.
 ckpts/
 
-# results/ is deliberately NOT ignored: generations happen on a GPU pod that gets
-# terminated, so tracking them is how they survive. It also means `--resume` on a fresh
-# pod skips whatever is already committed instead of regenerating it.
+# results/ DATA stays tracked: generations happen on a GPU pod that gets terminated, so
+# tracking them is how they survive, and it lets `--resume` on a fresh pod skip whatever is
+# already committed instead of regenerating it. Reviewers can also check the numbers against
+# the rows they came from.
 #
-# TODO (deferred until the arm 3 runs land): ignore results/ and untrack it with
-# `git rm -r --cached results/`. Doing it before the pods finish would silently drop the
-# incoming generations, which is the whole reason this directory is tracked today.
+# The internal REPORTs do NOT stay tracked. They are working lab notes — retractions,
+# debugging, protocol corrections, half-finished arms — written for us, not for readers.
+# The paper carries the claims; RUNBOOK.md carries the reproduction steps.
+results/*/REPORT.md
+
+# Arms that were run and are NOT reported in the paper. Kept locally, out of the repo, so a
+# reader cannot mistake a superseded or abandoned run for a result.
+results/2026-07-26_dpo/
+results/2026-07-26_bridge/
+data/preference_probe/
 
 # Intermediates on the way to prompts_final.jsonl, which is the only prompt file the
 # pipeline reads. --expand writes prompts.jsonl, --topup writes prompts_balanced.jsonl,
